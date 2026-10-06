@@ -1,4 +1,4 @@
-# README.md（第三周版本，只写到第三周，直接复制覆盖）
+# README.md（第三周版本）
 # 电商销售数据洞察看板
 > 项目：阿里天池电商订单数据分析可视化看板
 > 技术栈：Python + FastAPI + MySQL + DataGrip + Git/GitHub
