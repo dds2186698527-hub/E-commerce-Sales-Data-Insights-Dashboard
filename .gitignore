@@ -1,17 +1,31 @@
-# 忽略所有csv数据文件
-data/*.csv
+# Python 虚拟环境
+venv/
+env/
+.venv/
 
-# Python缓存
+# Python 缓存文件
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# 系统生成垃圾文件
-.DS_Store
-Thumbs.db
-
-# IDE临时文件
+# IDE 配置
 .idea/
 .vscode/
 *.iml
+
+# 数据库本地文件
+*.sql.local
+
+# 日志
+*.log
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 本地环境变量（存放数据库账号密码）
+.env
+
+# 原始数据集，不上传github
+data/
