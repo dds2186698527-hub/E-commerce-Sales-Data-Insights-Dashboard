@@ -1,55 +1,70 @@
+# README.md（第三周版本，只写到第三周，直接复制覆盖）
 # 电商销售数据洞察看板
-> 课程项目｜第二周末里程碑提交
+> 项目：阿里天池电商订单数据分析可视化看板
+> 技术栈：Python + FastAPI + MySQL + DataGrip + Git/GitHub
 
-## 1、项目选题
-电商销售数据洞察看板，实现订单多维度统计可视化分析。
+## 项目简介
+本项目基于阿里天池电商订单数据集，将多份原始CSV文件导入MySQL数据库，使用FastAPI开发后端统计查询接口。
+**考核要点：业务不直接读取静态CSV文件，所有数据查询均访问MySQL数据库，后端查询后返回JSON数据。**
 
-## 2、数据集说明
-- **数据来源：阿里天池公开数据集【电商用户行为分析数据集】**
-- 数据集网页地址：https://tianchi.aliyun.com/dataset/216886
-- 原始数据：多个CSV订单文件，合计1000+条成交订单记录
-- 原始文件存放路径：`data/`目录下（因文件体积较大，加入.gitignore，不上传Git仓库）
-- 数据预处理脚本：`data/preprocess_tianchi.py`
-> 原始天池数据集缺少字段`user_type(新老用户)`、`pay_method(支付方式)`；预处理脚本读取多个原始CSV，完成数据合并、清洗，随机补齐缺失字段，输出`orders.csv`，输出文件字段完全匹配数据库表`t_orders`。
-- 输出文件：`data/orders.csv`（预处理之后用于导入MySQL，不提交Git）
+## 项目目录结构
+```
+ecommerce-dashboard
+├── backend/                 # 后端代码（第三周任务）
+│   ├── main.py              # FastAPI主程序，统计接口
+│   └── import_data.py       # CSV批量导入MySQL脚本
+├── data/                    # 阿里天池原始CSV数据集
+├── .gitignore               # Git忽略配置
+└── README.md                # 项目说明文档
+```
 
-### 数据字段说明
-|字段|说明|
-|---|---|
-|order_no|订单号（来自原始invoice_no）|
-|goods_name|商品名称|
-|category|商品品类|
-|unit_price|商品单价|
-|quantity|购买数量|
-|total_amount|订单商品总金额|
-|order_time|下单时间|
-|user_id|用户ID（来自原始customer_id）|
-|user_type|脚本补全，用户类型 new新用户 / old老用户|
-|pay_method|脚本补全，支付方式：微信、支付宝、银行卡|
+## 环境依赖
+后端Python依赖包：
+```
+fastapi
+uvicorn
+pymysql
+```
+安装命令
+```bash
+pip install fastapi uvicorn pymysql
+```
 
-### 数据导入说明
-后续开发阶段操作：运行`preprocess_tianchi.py`得到`orders.csv`，使用Navicat/DBeaver将csv导入MySQL表`t_orders`。
+## 数据库说明
+- 数据库：MySQL
+- 管理工具：DataGrip
+- 数据表：`t_orders`
+- 数据来源：阿里天池多份CSV订单数据
+- 流程：执行建表SQL创建`t_orders`，运行import_data.py把CSV一次性导入数据库，后续查询不再读取csv文件
 
-> ### 考核点说明
-> 项目技术要求：禁止后端直接读取静态CSV文件。
-> 1. 本项目多个阿里天池原始CSV仅作为本地数据源；
-> 2. 使用辅助Python脚本完成多文件读取、数据清洗合并、字段补全，生成标准`orders.csv`；
-> 3. 将`orders.csv`手动导入MySQL数据库`t_orders`；
-> 4. SpringBoot后端所有查询、筛选、分页、统计全部通过SQL访问MySQL实现；**后端业务代码没有任何读取CSV文件的逻辑**。
+## 后端接口文档
+启动后端后访问：[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-## 3、数据库建表脚本
-脚本路径：`sql/create_table.sql`
-数据表名：`t_orders`
+| 接口地址 | 请求方式 | 接口说明 |
+| ---- | ---- | ---- |
+| `/api/overview` | GET | 大盘概览：总订单数、总销售额 |
+| `/api/month_sales` | GET | 月度销售趋势数据 |
+| `/api/stats/user_type` | GET | 用户性别订单统计 |
+| `/api/stats/goods_top10` | GET | 商品销量TOP10 |
+| `/api/stats/category_sale` | GET | 商品分类销售额统计 |
 
-## 4、当前项目阶段
-> 里程碑：第2周末，项目启动&数据源准备阶段
-- ✅ Git仓库初始化完成
-- ✅ 确定数据源：阿里天池数据集，编写多文件预处理Python脚本
-- ✅ 数据库建表SQL脚本编写完成
-- ⏳ 尚未开发SpringBoot后端接口、尚未开发前端页面
+## 运行步骤
+1. 在DataGrip连接MySQL，执行建表SQL，生成`t_orders`数据表
+2. 运行`backend/import_data.py`，导入阿里天池CSV数据入库
+3. 启动FastAPI后端服务
+```bash
+uvicorn backend.main:app --reload
+```
+后端地址：`[http://127.0.0.1:8000](http://127.0.0.1:8000)`
+接口文档地址：`[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)`
 
-## 5、后续开发计划
-1. 第4周末：完成前端静态页面原型
-2. 第6周末：后端API接口开发
-3. 第7周末：前后端联调测试
-4. 第8周：项目答辩
+## 开发进度（分周里程碑）
+- ✅ **第二周末**：初始化Git仓库，编写建表SQL，阿里天池CSV数据导入MySQL，提交基础文件
+- ✅ **第三周末**：FastAPI后端开发，编写统计查询接口，对接`t_orders`，接口测试通过，后端代码提交GitHub
+- ⏳ **第四周末**：前端可视化看板开发（待完成）
+
+## 项目说明
+1. 满足考核要求：CSV仅用于一次性导入数据库，业务查询全部通过后端访问MySQL获取数据，不读取本地静态csv。
+2. 采用前后端分离架构，后端负责数据查询与统计，返回JSON，后续前端页面调用接口绘图。
+3. .gitignore配置完成，不上传虚拟环境venv、本地敏感配置等文件。
+```
