@@ -100,5 +100,3 @@ ALTER TABLE t_orders ADD COLUMN pay_method VARCHAR(32) COMMENT '支付方式';
 2. JDK 17+
 3. Maven
 4. Python3 + pymysql + pandas（仅用于一次性导入数据）
-
-```
