@@ -16,7 +16,6 @@
 
 ## 项目目录结构
 ```
-
 ecommerce-dashboard
 ├── backend                 # SpringBoot 后端工程
 │   ├── src                 # Java 源码
@@ -27,7 +26,6 @@ ecommerce-dashboard
 ├── data                    # 存放原始天池 csv 数据集（.gitignore 忽略，不上传大文件）
 ├── README.md               # 项目说明文档
 └── .gitignore              # git 忽略配置
-
 ```
 
 ## 数据库说明
