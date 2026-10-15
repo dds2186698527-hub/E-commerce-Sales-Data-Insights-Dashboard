@@ -75,42 +75,126 @@
         </div>
     </div>
 
-    <script>
-        document.getElementById('kpi-sales').innerText = '¥ 500,000';
-        document.getElementById('kpi-orders').innerText = '1,200';
-        document.getElementById('kpi-avg').innerText = '¥ 416';
-        document.getElementById('kpi-hot').innerText = '15';
+        <script>
+        const API_BASE_URL = 'http://localhost:8080';
 
-        // F4 折线图
-        echarts.init(document.getElementById('chart-line')).setOption({
-            grid: { left: '60px', right: '30px', top: '60px', bottom: '40px' },
-            title: { text: 'F4 销售趋势', left: 'center' },
-            xAxis: { type: 'category', data: ['10-01', '10-02', '10-03'] },
-            yAxis: { type: 'value' },
-            series: [{ type: 'line', data: [20000, 30000, 25000], smooth: true }]
-        });
+        // 1. 请求后端接口
+        async function fetchApi(url) {
+            try {
+                const res = await fetch(url);
+                return await res.json(); // 直接返回真实数据
+            } catch (error) {
+                console.warn(`请求失败，启用降级方案: ${url}`, error);
+                return null; // 返回null代表失败，使用降级假数据
+            }
+        }
 
-        // F5 柱状图
-        echarts.init(document.getElementById('chart-bar')).setOption({
-            title: { text: 'F5 品类销售', left: 'center' },
-            xAxis: { type: 'category', data: ['手机', '电脑', '服饰'] },
-            yAxis: { type: 'value' },
-            series: [{ type: 'bar', data: [150000, 120000, 80000] }]
-        });
+        // 2. 渲染 KPI 卡片 (F1) 
+        async function loadKpiData() {
+            const data = await fetchApi(`${API_BASE_URL}/api/order/total`);
+            if (data && data.order_count !== undefined) {
+                // 真实数据映射
+                document.getElementById('kpi-sales').innerText = '¥ ' + Number(data.all_sale).toLocaleString();
+                document.getElementById('kpi-orders').innerText = data.order_count.toLocaleString();
+                // 后端没算平均客单价和热销商品数，前端自己算/降级
+                document.getElementById('kpi-avg').innerText = '¥ ' + (data.all_sale / data.order_count).toFixed(2);
+                document.getElementById('kpi-hot').innerText = '15'; 
+            } else {
+                // 降级假数据
+                document.getElementById('kpi-sales').innerText = '¥ 500,000';
+                document.getElementById('kpi-orders').innerText = '1,200';
+                document.getElementById('kpi-avg').innerText = '¥ 416';
+                document.getElementById('kpi-hot').innerText = '15';
+            }
+        }
 
-        // F6 TOP10（横向柱状图）
-        echarts.init(document.getElementById('chart-top10')).setOption({
-            title: { text: 'F6 商品TOP10', left: 'center' },
-            xAxis: { type: 'value' },
-            yAxis: { type: 'category', data: ['商品C', '商品B', '商品A'] },
-            series: [{ type: 'bar', data: [5000, 4200, 3800] }]
-        });
+        // 3. 渲染 F5 品类销售柱状图
+        async function loadBarChart() {
+            const data = await fetchApi(`${API_BASE_URL}/api/order/category/sales`);
+            let chartData = [];
+            if (data && data.length > 0) {
+                chartData = data; // 真实数据
+            } else {
+                // 降级假数据
+                chartData = [ {category: '手机', sale_total: 150000}, {category: '电脑', sale_total: 120000}, {category: '服饰', sale_total: 80000} ];
+            }
+            echarts.init(document.getElementById('chart-bar')).setOption({
+                grid: { left: '60px', right: '30px', top: '60px', bottom: '40px' },
+                title: { text: 'F5 品类销售', left: 'center' },
+                xAxis: { type: 'category', data: chartData.map(d => d.category) },
+                yAxis: { type: 'value' },
+                series: [{ type: 'bar', data: chartData.map(d => d.sale_total), itemStyle: { color: '#5470c6' } }]
+            });
+        }
 
-        // F7 饼图
-        echarts.init(document.getElementById('chart-pie')).setOption({
-            title: { text: 'F7 用户占比', left: 'center' },
-            series: [{ type: 'pie', radius: '50%', data: [{value: 70, name: '新用户'}, {value: 30, name: '老用户'}] }]
-        });
+        // 4. 渲染 F6 商品TOP10
+        async function loadTop10() {
+            const data = await fetchApi(`${API_BASE_URL}/api/order/goods/top10`);
+            let chartData = [];
+            if (data && data.length > 0) {
+                chartData = data; // 真实数据
+            } else {
+                // 降级假数据
+                chartData = [ {goods_name: '商品C', total_qty: 5000}, {goods_name: '商品B', total_qty: 4200}, {goods_name: '商品A', total_qty: 3800} ];
+            }
+            echarts.init(document.getElementById('chart-top10')).setOption({
+                grid: { left: '120px', right: '30px', top: '60px', bottom: '40px' },
+                title: { text: 'F6 商品TOP10', left: 'center' },
+                xAxis: { type: 'value' },
+                yAxis: { type: 'category', data: chartData.map(d => d.goods_name).reverse() },
+                series: [{ type: 'bar', data: chartData.map(d => d.total_qty).reverse(), itemStyle: { color: '#5470c6' } }]
+            });
+        }
+
+        // 5. 渲染 F4 折线图 和 F7 饼图
+        function loadOtherCharts() {
+            // F4 假数据
+            echarts.init(document.getElementById('chart-line')).setOption({
+                grid: { left: '60px', right: '30px', top: '60px', bottom: '40px' },
+                title: { text: 'F4 销售趋势（待后端提供）', left: 'center' },
+                xAxis: { type: 'category', data: ['10-01', '10-02', '10-03'] },
+                yAxis: { type: 'value' },
+                series: [{ type: 'line', data: [20000, 30000, 25000], smooth: true }]
+            });
+            // F7 假数据
+            echarts.init(document.getElementById('chart-pie')).setOption({
+                title: { text: 'F7 用户占比（待后端提供）', left: 'center' },
+                series: [{ type: 'pie', radius: '50%', data: [{value: 70, name: '新用户'}, {value: 30, name: '老用户'}] }]
+            });
+        }
+
+        // 6. 渲染 F8 表格（用全量列表降级展示前10条）
+        async function loadTableData() {
+            const data = await fetchApi(`${API_BASE_URL}/api/order/list`);
+            const tbody = document.querySelector('table tbody');
+            if (data && data.length > 0) {
+                // 真实数据（只取前10条，因为后端没写分页）
+                const list = data.slice(0, 10);
+                tbody.innerHTML = list.map(item => `
+                    <tr>
+                        <td>${item.orderNo}</td>
+                        <td>${item.goodsName}</td>
+                        <td>${item.totalAmount}</td>
+                        <td>${item.orderTime ? item.orderTime.split('T')[0] : '--'}</td>
+                    </tr>
+                `).join('');
+            } else {
+                // 降级假数据
+                tbody.innerHTML = `
+                    <tr><td>1</td><td>iPhone 15</td><td>6999</td><td>2026-10-01</td></tr>
+                    <tr><td>2</td><td>华为Mate60</td><td>5999</td><td>2026-10-02</td></tr>
+                `;
+            }
+        }
+
+        // 页面加载时运行 
+        window.onload = function() {
+            loadKpiData();
+            loadBarChart();
+            loadTop10();
+            loadOtherCharts(); 
+            loadTableData();
+        };
     </script>
 </body>
 </html>
