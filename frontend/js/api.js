@@ -1,4 +1,3 @@
-// 假数据，等你后端好了就替换这里
 const mockKpi = { total_sales: 500000, total_orders: 1200, avg_order_value: 416.6, hot_product_count: 15 };
 
 // 渲染KPI

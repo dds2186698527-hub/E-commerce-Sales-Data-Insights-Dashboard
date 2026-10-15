@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <title>电商销售数据洞察看板</title>
     <!-- 引入 ECharts，如果没网可以把文件下载到本地 -->
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <script src="js/echarts.min.js"></script>
     <style>
-        /* 基础样式，告别原始布局 */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; background: #f4f6f9; padding: 20px; }
         
@@ -77,13 +76,11 @@
     </div>
 
     <script>
-        // 1. 模拟假数据（让页面先有东西展示，而不是 --）
         document.getElementById('kpi-sales').innerText = '¥ 500,000';
         document.getElementById('kpi-orders').innerText = '1,200';
         document.getElementById('kpi-avg').innerText = '¥ 416';
         document.getElementById('kpi-hot').innerText = '15';
 
-        // 2. 初始化 ECharts（把空盒子变成图表）
         // F4 折线图
         echarts.init(document.getElementById('chart-line')).setOption({
             grid: { left: '60px', right: '30px', top: '60px', bottom: '40px' },
