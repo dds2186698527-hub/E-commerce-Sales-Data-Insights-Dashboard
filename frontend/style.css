@@ -1,0 +1,267 @@
+/* ===== 全局 ===== */
+:root {
+    --brand: #5470c6;
+    --brand-dark: #3f5bb5;
+    --text: #333;
+    --muted: #8a94a6;
+    --line: #e8ebf0;
+    --bg: #f4f6f9;
+    --card-shadow: 0 2px 6px rgba(15, 30, 60, .06);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 20px;
+}
+
+.wrap { max-width: 1720px; margin: 0 auto; }
+
+/* ===== 顶部状态条（后端不可用 / 部分接口失败时提示） ===== */
+.status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: #fff8e6;
+    border: 1px solid #ffd591;
+    color: #8a5a00;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    font-size: 14px;
+    line-height: 1.5;
+}
+.status-bar[hidden] { display: none; }
+.status-bar .status-text { flex: 1; }
+.status-bar .status-retry {
+    flex: none;
+    padding: 6px 14px;
+    border: 1px solid #e0a63a;
+    background: #fff;
+    color: #8a5a00;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.status-bar .status-retry:hover { background: #fff3d6; }
+
+/* ===== F1 KPI 卡片 ===== */
+.kpi-container {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.kpi-card {
+    flex: 1 1 220px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+    text-align: center;
+}
+
+.kpi-card h3 {
+    font-size: 16px;
+    color: #666;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.kpi-card p {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.kpi-card .kpi-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #a7afbd;
+}
+
+/* ===== F2 / F3 筛选区 ===== */
+.filter-container {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filter-container select,
+.filter-container input {
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    color: var(--text);
+    background: #fff;
+}
+
+.filter-container select:focus,
+.filter-container input:focus {
+    outline: none;
+    border-color: var(--brand);
+}
+
+.filter-container button {
+    padding: 8px 20px;
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.filter-container button:hover { background: var(--brand-dark); }
+
+.filter-container button.ghost {
+    background: #fff;
+    color: #5b6577;
+    border: 1px solid #ccd3e0;
+}
+
+.filter-container button.ghost:hover { background: #f5f7fb; }
+
+.filter-hint {
+    font-size: 12px;
+    color: #a7afbd;
+    line-height: 1.4;
+}
+
+/* ===== F4 - F7 图表区 ===== */
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.chart-box {
+    position: relative;
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    height: 350px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--card-shadow);
+}
+
+.chart-title {
+    flex: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #444;
+    margin-bottom: 8px;
+}
+
+.chart-canvas {
+    flex: 1;
+    min-height: 0;
+}
+
+.chart-empty {
+    position: absolute;
+    left: 15px;
+    right: 15px;
+    top: 46px;
+    bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #a7afbd;
+    font-size: 14px;
+    text-align: center;
+    background: rgba(255, 255, 255, .92);
+    border-radius: 6px;
+}
+
+.chart-empty[hidden] { display: none; }
+.chart-empty .chart-empty-hint { font-size: 12px; color: #b9c0cc; }
+
+/* ===== F8 表格 ===== */
+.table-container {
+    background: #fff;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+}
+
+.table-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.table-head h3 { font-size: 14px; color: #444; }
+.table-head .table-summary { font-size: 12px; color: #a7afbd; }
+
+table { width: 100%; border-collapse: collapse; }
+
+th, td {
+    border-bottom: 1px solid #eee;
+    padding: 10px;
+    text-align: left;
+    font-size: 14px;
+}
+
+th { background: #fafafa; color: #5b6577; font-weight: 600; }
+
+tbody tr:hover { background: #fafcff; }
+
+td.num { font-variant-numeric: tabular-nums; }
+
+tr.table-empty td {
+    text-align: center;
+    color: #a7afbd;
+    padding: 28px 10px;
+}
+
+.pagination {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #5b6577;
+}
+
+.pagination button {
+    padding: 6px 14px;
+    border: 1px solid #ccd3e0;
+    background: #fff;
+    color: #5b6577;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.pagination button:hover:not([disabled]) { border-color: var(--brand); color: var(--brand); }
+.pagination button[disabled] { opacity: .45; cursor: not-allowed; }
+
+.updated-at { font-size: 12px; color: #a7afbd; }
+
+/* ===== 响应式 ===== */
+@media (max-width: 960px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-box { height: 300px; }
+    body { padding: 12px; }
+}
