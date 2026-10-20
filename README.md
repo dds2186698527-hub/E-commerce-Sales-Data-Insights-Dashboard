@@ -1,5 +1,4 @@
-# 🛒 电商销售数据洞察看板 (E-commerce Sales Insights Dashboard)
-
+# 🛒 电商销售数据洞察看板 
 > **项目简介**：基于电商订单数据集的前后端分离可视化看板。后端使用 Spring Boot 提供 RESTful API 从 MySQL 查询数据，前端使用原生 HTML/CSS/JS 结合 ECharts 渲染图表，并附带商家建议（销量/销售额预测）模块。
 >
 
