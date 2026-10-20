@@ -31,7 +31,7 @@ ecommerce-dashboard
 │   │   ├── BackendApplication.java       # 启动类
 │   │   ├── config/CorsConfig.java        # 全局 CORS 跨域配置
 │   │   ├── controller/
-│   │   │   ├── OrderController.java      # 订单统计接口（F1/F5/F6/F8）
+│   │   │   ├── OrderController.java      # 订单接口（A1-A5 + 全量列表）
 │   │   │   └── ForecastController.java   # 商家建议预测接口（F9）
 │   │   ├── dto/ForecastResponse.java     # 预测接口返回结构
 │   │   ├── entity/TOrders.java           # 订单实体
@@ -55,7 +55,9 @@ ecommerce-dashboard
 ├── sql/
 │   └── create_table.sql                  # 建库建表脚本
 ├── data/
-│   └── generate_orders.py                # 旧的数据生成脚本（当前未使用）
+│   ├── 淘宝.csv / 京东.csv / 拼多多.csv / 苏宁易购.csv / 天猫.csv / 1688.csv  # 各平台原始数据
+│   ├── generate_orders.py              # 合并各平台CSV → ecommerce_data.csv
+│   └── ecommerce_data.csv              # 合并后的总数据
 └── README.md
 ```
 
@@ -157,11 +159,14 @@ java -jar target/backend-0.0.1-SNAPSHOT.jar
 
 | 接口 | 请求方式 | 功能 | 对应前端 |
 | :--- | :--- | :--- | :--- |
-| `/api/order/total` | GET | 订单总数 + 销售总额 | **F1** KPI |
-| `/api/order/category/sales` | GET | 按品类销售额 | **F5** 柱状图、**F7** 饼图 |
-| `/api/order/goods/top10` | GET | 商品销量 TOP10 | **F6** 横向柱状图 |
-| `/api/order/list` | GET | 全部订单明细 | **F8** 表格（前端分页） |
-| `/api/forecast?horizon=7\|30\|90&metric=revenue\|qty` | GET | 未来区间销量/销售额预测 + 备货建议 | **F9** 商家建议 |
+| `/api/categories` | GET | A1 品类列表 | F2 品类筛选下拉框 |
+| `/api/orders?category=&startDate=&endDate=&keyword=&page=&size=` | GET | A2 条件查询+分页 | F8 订单表格 |
+| `/api/orders/list` | GET | 全部订单明细 | F3/F4/F7 前端聚合用 |
+| `/api/orders/kpi` | GET | A3 KPI汇总（销售额/订单数/客单价/热销商品数） | F1 KPI卡片 |
+| `/api/orders/ranking?metric=qty\|revenue` | GET | A4 商品TOP10 | F6 横向柱状图 |
+| `/api/orders/category-sales` | GET | 按品类销售额 | F5 品类柱状图 |
+| `/api/orders/stats?granularity=day\|week\|month` | GET | A5 按时间聚合销售额与订单量 | F4 趋势图 |
+| `/api/forecast?horizon=7\|30\|90&metric=revenue\|qty` | GET | 未来区间销量/销售额预测 + 备货建议 | F9 商家建议 |
 
 ---
 
@@ -169,7 +174,7 @@ java -jar target/backend-0.0.1-SNAPSHOT.jar
 
 | 现象 | 原因 / 解决 |
 | :--- | :--- |
-| 页面顶部黄色提示「无法连接后端」 | 8080 没起来，或被防火墙拦截；先 `curl http://127.0.0.1:8080/api/order/total` 验证 |
+| 页面顶部黄色提示「无法连接后端」 | 8080 没起来，或被防火墙拦截；先 `curl http://127.0.0.1:8080/api/orders/kpi` 验证 |
 | 启动报 `Port 8080 was already in use` | 端口被占：换 `server.port`，或杀掉旧 java 进程 |
 | 启动报 `Access denied for user 'root'@'localhost'` | `application.yml` 里的密码和你本机 MySQL 不一致 |
 | 启动报 `Unknown database 'ecommerce_dashboard'` | 没执行 `sql/create_table.sql` |
@@ -187,4 +192,4 @@ java -jar target/backend-0.0.1-SNAPSHOT.jar
 - **第 2 周**：Git 仓库初始化，数据集准备，SQL 建表脚本完成。
 - **第 3 周**：重构后端为 Spring Boot 3 架构，编写数据导入脚本，完成基础统计接口开发。
 - **第 4-6 周**：完成前端 F1-F8 静态原型，引入本地 ECharts，JS 模块化拆分（api.js / charts.js / main.js），完成真实接口对接与降级容错。
-- **第 7 周**：前后端联调，解决 CORS；前端本地聚合补齐时间趋势与条件筛选；统一 21,000 条真实订单入库。新增 F9 商家建议模块（销量/销售额预测 + 备货建议），前端补充空状态与文件职责注释。
+- **第 7 周**：前后端联调，解决 CORS；新增 F9 商家建议模块（销量/销售额预测 + 备货建议）；补齐 A1-A5 规范接口（品类列表、条件分页查询、KPI汇总、TOP10、时间聚合）；F3 加快捷日期筛选，F7 饼图改为新老用户行为占比。
