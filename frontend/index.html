@@ -1,4 +1,9 @@
 <!DOCTYPE html>
+<!--
+  index.html —— 看板页面结构（只放 DOM，不放业务逻辑）
+  负责 F1–F9 各区块的骨架：KPI 卡片、筛选条、4 张图表容器、订单明细表、商家建议模块，
+  并按顺序引入 style.css 与 js/echarts.min.js、js/api.js、js/charts.js、js/main.js。
+-->
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -48,7 +53,7 @@
             <input type="date" id="end-date" aria-label="结束日期">
             <button id="filter-query" type="button">查询</button>
             <button id="filter-reset" type="button" class="ghost">重置</button>
-            <span class="filter-hint">筛选在前端对已加载的订单明细计算（后端暂未提供筛选参数）</span>
+            <span class="filter-hint"></span>
         </section>
 
         <!-- F4 - F7 图表 -->
@@ -73,6 +78,55 @@
                 <div id="chart-pie" class="chart-canvas"></div>
                 <div class="chart-empty" hidden></div>
             </div>
+        </section>
+
+        <!-- F9 商家建议：预测未来 7/30/90 天各商品的销量与销售额，并给出备货建议 -->
+        <section class="advice-panel" aria-label="商家建议">
+            <div class="advice-head">
+                <div class="advice-head-text">
+                    <h3>F9 商家建议 · 未来销量 / 销售额预测</h3>
+                    <p id="advice-sub" class="advice-sub">基于历史订单预测（最近 28 天日均 + 周内季节性 + 短期趋势）</p>
+                </div>
+                <div class="advice-controls">
+                    <div class="seg" id="horizon-seg" role="group" aria-label="预测区间">
+                        <button type="button" data-horizon="7">未来 7 天</button>
+                        <button type="button" data-horizon="30" class="active">未来 30 天</button>
+                        <button type="button" data-horizon="90">未来 90 天</button>
+                    </div>
+                    <div class="seg" id="metric-seg" role="group" aria-label="预测指标">
+                        <button type="button" data-metric="revenue" class="active">按销售额</button>
+                        <button type="button" data-metric="qty">按销量</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="advice-summary">
+                <div class="advice-kpi"><span>区间预测</span><strong id="advice-total">—</strong></div>
+                <div class="advice-kpi"><span>预测销量</span><strong id="advice-qty">—</strong></div>
+                <div class="advice-kpi"><span>看涨商品</span><strong id="advice-growing">—</strong></div>
+                <div class="advice-kpi"><span>看跌商品</span><strong id="advice-declining">—</strong></div>
+            </div>
+
+            <div class="advice-grid">
+                <div class="chart-box">
+                    <div class="chart-title">预测榜 TOP10（蓝=上涨，红=下滑）</div>
+                    <div id="chart-forecast" class="chart-canvas"></div>
+                    <div class="chart-empty" hidden></div>
+                </div>
+                <div class="advice-table-wrap">
+                    <div class="chart-title">备货建议清单（前 8 名）</div>
+                    <table class="advice-table">
+                        <thead>
+                            <tr><th>商品</th><th>品类</th><th>预测</th><th>环比</th><th>建议</th></tr>
+                        </thead>
+                        <tbody id="advice-tbody">
+                            <tr class="table-empty"><td colspan="5">加载中…</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <p id="advice-tip" class="advice-tip"></p>
         </section>
 
         <!-- F8 表格 -->
