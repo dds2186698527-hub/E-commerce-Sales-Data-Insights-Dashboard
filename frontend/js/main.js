@@ -1,7 +1,8 @@
 /*
- * main.js —— 主控逻辑
- * 状态管理、接口编排、筛选 / 分页、KPI / 表格渲染。
- * 依赖 api.js（window.Api）与 charts.js（window.Charts）
+ * main.js —— 主控逻辑（页面的大脑）
+ * 职责：维护页面状态、并发调用接口、处理筛选/分页交互、渲染 KPI、明细表、商家建议模块。
+ * 不负责：具体请求细节（api.js）、具体图表样式（charts.js）。
+ * 依赖：window.Api（api.js）、window.Charts（charts.js）。
  */
 (function (global) {
     'use strict';
@@ -16,6 +17,10 @@
         summary: null,       // 后端汇总（/api/order/total）
         categoryRows: null,  // 后端品类销售额（/api/order/category/sales）
         topGoods: null,      // 后端商品 TOP10（/api/order/goods/top10）
+        forecast: null,      // 商家建议预测（/api/forecast）
+        forecastHorizon: 30, // 预测区间：7 / 30 / 90 天
+        forecastMetric: 'revenue', // 预测指标：revenue 销售额 / qty 销量
+        forecastError: '',
         filters: { category: '', start: '', end: '' },
         page: 1,
         loading: false,
@@ -230,6 +235,83 @@
         renderCharts(rows);
         renderTable(rows);
         renderCategoryOptions();
+        renderForecast();
+    }
+
+    /* ---------- F9 商家建议 ---------- */
+    function metricLabel(metric) {
+        return metric === 'qty' ? '销量' : '销售额';
+    }
+
+    function formatMetric(value, metric, digits) {
+        if (metric === 'qty') {
+            return Math.round(Number(value) || 0).toLocaleString('zh-CN') + ' 件';
+        }
+        return money(value, digits);
+    }
+
+    function growthText(rate) {
+        var n = Number(rate) || 0;
+        return (n >= 0 ? '+' : '') + (n * 100).toFixed(1) + '%';
+    }
+
+    function growthClass(rate) {
+        var n = Number(rate) || 0;
+        if (n > 0.005) return 'up';
+        if (n < -0.005) return 'down';
+        return 'flat';
+    }
+
+    function adviceClass(advice) {
+        if (advice === '重点备货' || advice === '适量补货') return 'badge-up';
+        if (advice === '减少进货' || advice === '控制库存') return 'badge-down';
+        return 'badge-flat';
+    }
+
+    function renderAdviceList(items, metric) {
+        if (!items || !items.length) {
+            els.adviceTbody.innerHTML = '<tr class="table-empty"><td colspan="5">暂无预测数据</td></tr>';
+            return;
+        }
+        els.adviceTbody.innerHTML = items.map(function (item) {
+            return '<tr>' +
+                '<td>' + escapeHtml(item.goodsName) + '</td>' +
+                '<td>' + escapeHtml(item.category) + '</td>' +
+                '<td class="num">' + formatMetric(item.predicted, metric) + '</td>' +
+                '<td class="num growth ' + growthClass(item.growthRate) + '">' + growthText(item.growthRate) + '</td>' +
+                '<td><span class="badge ' + adviceClass(item.advice) + '">' + escapeHtml(item.advice) + '</span></td>' +
+                '</tr>';
+        }).join('');
+    }
+
+    function renderForecast() {
+        var data = state.forecast;
+        var metric = state.forecastMetric;
+
+        if (!data) {
+            setText(els.adviceTotal, '—');
+            setText(els.adviceQty, '—');
+            setText(els.adviceGrowing, '—');
+            setText(els.adviceDeclining, '—');
+            setText(els.adviceSub, state.forecastError
+                ? '预测加载失败：' + state.forecastError
+                : '基于历史订单预测（最近 28 天日均 + 周内季节性 + 短期趋势）');
+            setText(els.adviceTip, '');
+            Charts.renderForecastBar(els.chartForecast, [], metric);
+            els.adviceTbody.innerHTML = '<tr class="table-empty"><td colspan="5">暂无预测数据</td></tr>';
+            return;
+        }
+
+        setText(els.adviceSub, '预测基准日 ' + (data.baseDate || '--') +
+            '（历史数据截止日） · 区间 ' + data.horizonDays + ' 天 · 按' + metricLabel(metric));
+        setText(els.adviceTotal, formatMetric(data.summary.totalPredicted, metric));
+        setText(els.adviceQty, formatMetric(data.summary.totalPredictedQty, 'qty'));
+        setText(els.adviceGrowing, data.summary.growing + ' 个');
+        setText(els.adviceDeclining, data.summary.declining + ' 个');
+
+        Charts.renderForecastBar(els.chartForecast, data.items, metric);
+        renderAdviceList(data.items.slice(0, 8), metric);
+        setText(els.adviceTip, data.summary.tip || '');
     }
 
     /* ---------- 状态条 ---------- */
@@ -257,7 +339,12 @@
             { name: '汇总指标', run: Api.fetchSummary, done: function (d) { state.summary = d; } },
             { name: '品类销售', run: Api.fetchCategorySales, done: function (d) { state.categoryRows = d; } },
             { name: '商品 TOP10', run: Api.fetchGoodsTop10, done: function (d) { state.topGoods = d; } },
-            { name: '订单明细', run: Api.fetchOrderList, done: function (d) { state.orders = d; } }
+            { name: '订单明细', run: Api.fetchOrderList, done: function (d) { state.orders = d; } },
+            {
+                name: '商家建议',
+                run: function () { return Api.fetchForecast(state.forecastHorizon, state.forecastMetric); },
+                done: function (d) { state.forecast = d; state.forecastError = ''; }
+            }
         ];
 
         Promise.allSettled(tasks.map(function (task) { return task.run(); }))
@@ -269,6 +356,9 @@
                         var reason = result.reason;
                         state.failures.push(tasks[index].name + '：' +
                             (reason && reason.message ? reason.message : '请求失败'));
+                        if (tasks[index].name === '商家建议') {
+                            state.forecastError = reason && reason.message ? reason.message : '请求失败';
+                        }
                     }
                 });
             })
@@ -319,6 +409,29 @@
         };
     }
 
+    function setActive(container, attribute, value) {
+        Array.prototype.forEach.call(container.querySelectorAll('button'), function (button) {
+            button.classList.toggle('active', button.getAttribute(attribute) === String(value));
+        });
+    }
+
+    // 只刷新商家建议（切换区间/指标时不用重拉整页）
+    function reloadForecast() {
+        setText(els.adviceTotal, '…');
+        Api.fetchForecast(state.forecastHorizon, state.forecastMetric)
+            .then(function (data) {
+                state.forecast = data;
+                state.forecastError = '';
+            })
+            .catch(function (err) {
+                state.forecast = null;
+                state.forecastError = err && err.message ? err.message : '请求失败';
+            })
+            .then(function () {
+                renderForecast();
+            });
+    }
+
     function bindEvents() {
         els.query.addEventListener('click', applyFilters);
         els.reset.addEventListener('click', resetFilters);
@@ -327,6 +440,22 @@
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter') applyFilters();
             });
+        });
+
+        els.horizonSeg.addEventListener('click', function (event) {
+            var button = event.target.closest ? event.target.closest('button[data-horizon]') : null;
+            if (!button) return;
+            state.forecastHorizon = Number(button.getAttribute('data-horizon')) || 30;
+            setActive(els.horizonSeg, 'data-horizon', state.forecastHorizon);
+            reloadForecast();
+        });
+
+        els.metricSeg.addEventListener('click', function (event) {
+            var button = event.target.closest ? event.target.closest('button[data-metric]') : null;
+            if (!button) return;
+            state.forecastMetric = button.getAttribute('data-metric') === 'qty' ? 'qty' : 'revenue';
+            setActive(els.metricSeg, 'data-metric', state.forecastMetric);
+            reloadForecast();
         });
 
         els.prev.addEventListener('click', function () {
@@ -367,7 +496,17 @@
             chartLine: $('chart-line'),
             chartBar: $('chart-bar'),
             chartTop10: $('chart-top10'),
-            chartPie: $('chart-pie')
+            chartPie: $('chart-pie'),
+            chartForecast: $('chart-forecast'),
+            adviceTotal: $('advice-total'),
+            adviceQty: $('advice-qty'),
+            adviceGrowing: $('advice-growing'),
+            adviceDeclining: $('advice-declining'),
+            adviceTbody: $('advice-tbody'),
+            adviceTip: $('advice-tip'),
+            adviceSub: $('advice-sub'),
+            horizonSeg: $('horizon-seg'),
+            metricSeg: $('metric-seg')
         };
 
         bindEvents();

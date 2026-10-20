@@ -1,7 +1,8 @@
 /*
  * charts.js —— 图表渲染层
- * 只负责：ECharts 实例管理、空状态、把归一化后的数据画出来。
- * 依赖 window.echarts（js/echarts.min.js）
+ * 职责：管理 ECharts 实例、处理空数据状态、把已经归一化的数据画成图。
+ * 不负责：取数（api.js）和业务判断（main.js）。
+ * 依赖：window.echarts（本地 js/echarts.min.js）。
  */
 (function (global) {
     'use strict';
@@ -212,6 +213,68 @@
         return draw(canvas, option, list, '暂无品类占比数据', '需要后端返回 /api/order/category/sales');
     }
 
+    // F9 商家建议：预测榜 TOP10（横向柱状图，涨蓝跌红）
+    function renderForecastBar(canvas, items, metric) {
+        var list = (items || []).slice(0, 10);
+        var byQty = metric === 'qty';
+        var names = list.map(function (item) { return item.goodsName; }).reverse();
+        var data = list.map(function (item) {
+            return {
+                value: item.predicted,
+                itemStyle: { color: item.growthRate >= 0 ? PALETTE[0] : PALETTE[3] }
+            };
+        }).reverse();
+        var option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: function (params) {
+                    var p = params[0];
+                    var item = list.filter(function (x) { return x.goodsName === p.name; })[0] || {};
+                    var growth = item.growthRate == null ? 0 : item.growthRate;
+                    var sign = growth >= 0 ? '+' : '';
+                    return p.marker + p.name +
+                        '<br/>预测' + (byQty ? '销量 ' : '销售额 ') +
+                        (byQty ? p.value + ' 件' : money(p.value)) +
+                        '<br/>环比 ' + sign + (growth * 100).toFixed(1) + '%' +
+                        '<br/>' + (item.advice || '');
+                }
+            },
+            grid: { left: 8, right: 56, top: 16, bottom: 8, containLabel: true },
+            xAxis: {
+                type: 'value',
+                splitLine: { lineStyle: { color: '#eef1f6' } },
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: { color: '#8a94a6', fontSize: 12, formatter: byQty ? '{value}' : compact }
+            },
+            yAxis: {
+                type: 'category',
+                data: names,
+                axisLine: { lineStyle: { color: '#d9dee7' } },
+                axisTick: { show: false },
+                axisLabel: { color: '#5b6577', fontSize: 12, width: 110, overflow: 'truncate' }
+            },
+            series: [{
+                name: byQty ? '预测销量' : '预测销售额',
+                type: 'bar',
+                barMaxWidth: 16,
+                itemStyle: { borderRadius: [0, 4, 4, 0] },
+                label: {
+                    show: true,
+                    position: 'right',
+                    color: '#8a94a6',
+                    fontSize: 11,
+                    formatter: function (p) {
+                        return byQty ? p.value + ' 件' : compact(p.value);
+                    }
+                },
+                data: data
+            }]
+        };
+        return draw(canvas, option, list, '暂无预测数据', '需要后端返回 /api/forecast');
+    }
+
     function clearAll() {
         instances.forEach(function (chart) { chart.clear(); });
     }
@@ -226,6 +289,7 @@
         renderCategoryBar: renderCategoryBar,
         renderTop10: renderTop10,
         renderCategoryPie: renderCategoryPie,
+        renderForecastBar: renderForecastBar,
         resizeAll: resizeAll,
         clearAll: clearAll
     };
