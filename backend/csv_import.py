@@ -37,9 +37,20 @@ df = df.rename(columns={
 
 # 重点：CSV没有订单号，新增order_no，自动生成1,2,3...
 df["order_no"] = range(1, len(df) + 1)
-# CSV 没有 user_type / pay_method 字段，按合理分布随机填充
-df["user_type"] = [random.choice(["new", "old"]) for _ in range(len(df))]
-df["pay_method"] = [random.choice(["微信", "支付宝", "银行卡"]) for _ in range(len(df))]
+
+# user_type：按时间判断，以2024-07-01为界，之前下单的算老用户，之后的算新用户
+df["order_time_dt"] = pd.to_datetime(df["order_time"])
+cutoff = pd.Timestamp("2024-07-01")
+df["user_type"] = df["order_time_dt"].apply(lambda t: "old" if t < cutoff else "new")
+df.drop(columns=["order_time_dt"], inplace=True)
+
+# pay_method：CSV里有"支付方式"列就直接用，没有则统一填"未知"
+if "支付方式" in df.columns:
+    df = df.rename(columns={"支付方式": "pay_method"})
+    print("✅ CSV含支付方式列，直接使用真实数据")
+else:
+    df["pay_method"] = "未知"
+    print("⚠️ CSV无支付方式列，默认填'未知'")
 
 # 只保留表需要的列
 cols = ["order_no", "goods_name", "category", "unit_price", "quantity",
