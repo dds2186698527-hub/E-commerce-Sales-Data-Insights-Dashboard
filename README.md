@@ -1,8 +1,7 @@
 # 🛒 电商销售数据洞察看板 (E-commerce Sales Insights Dashboard)
 
-> **项目简介**：本项目基于阿里天池电商订单数据集，构建了一套前后端分离的电商销售数据可视化看板。后端使用 Spring Boot 提供 RESTful API 从 MySQL 查询数据，前端使用原生 HTML/CSS/JS 结合 ECharts 渲染图表。
-> 
-> **核心考核点**：CSV 数据仅作为一次性初始化脚本导入 MySQL，后端业务接口完全通过查询数据库返回数据，前端不直接读取本地静态文件。
+> **项目简介**：基于电商订单数据集的前后端分离可视化看板。后端使用 Spring Boot 提供 RESTful API 从 MySQL 查询数据，前端使用原生 HTML/CSS/JS 结合 ECharts 渲染图表，并附带商家建议（销量/销售额预测）模块。
+>
 
 ---
 
@@ -11,12 +10,16 @@
 | 层级 | 技术选型 | 说明 |
 | :--- | :--- | :--- |
 | **数据库** | MySQL 8.0+ | 存储订单数据 `t_orders` 表 |
-| **后端** | **Spring Boot 3.2.0 + JDK 17** | 采用分层架构（Controller/Service/Mapper），集成 MyBatis-Plus |
-| **数据预处理** | Python 3 + pandas + pymysql | 仅用于 `csv_import.py` 一次性将 CSV 导入 MySQL |
+| **后端** | **Spring Boot 3.2.0 + JDK 17 / 21** | 分层架构（Controller / Service / Mapper），集成 MyBatis-Plus |
+| **构建工具** | Maven 3.8+ | 也可直接用 IntelliJ IDEA 自带的 Maven |
+| **数据预处理** | Python 3 + pandas + pymysql | 仅用于一次性把 CSV 导入 MySQL，不提供 Web 服务 |
 | **接口文档** | Swagger / springdoc-openapi | 后端启动后自动生成可视化 API 文档 |
-| **前端** | **原生 HTML + CSS + JS (ES6+)** | 严格不使用 Vue/React，使用 `fetch` 调用 API，无 axios |
-| **图表库** | Apache ECharts | 本地引入 `echarts.min.js`，确保断网环境可演示 |
+| **前端** | **原生 HTML + CSS + JS (ES6+)** | 不使用 Vue/React，`fetch` 调用 API，无 axios |
+| **图表库** | Apache ECharts 5.5 | 本地引入 `echarts.min.js`，断网也能演示 |
 | **版本管理** | Git + GitHub | 协同开发与进度追踪 |
+
+> ⚠️ **JDK 版本注意**：项目依赖的 Lombok 1.18.30 不支持 JDK 25/26，编译会报，
+> 请使用 **JDK 17 或 JDK 21**（推荐 21 LTS）。
 
 ---
 
@@ -24,28 +27,37 @@
 
 ```text
 ecommerce-dashboard
-├── backend/                    # Spring Boot 后端工程
+├── backend/                              # Spring Boot 后端工程
 │   ├── src/main/java/com/ecommerce/
-│   │   ├── BackendApplication.java     # 启动类
-│   │   ├── config/CorsConfig.java      # CORS 跨域配置
-│   │   ├── controller/OrderController.java # 订单接口控制器
-│   │   ├── entity/TOrders.java          # 订单实体类
-│   │   ├── mapper/TOrdersMapper.java    # MyBatis-Plus Mapper
-│   │   └── service/                     # 业务逻辑层
-│   ├── src/main/resources/application.yml # 数据库/端口配置 (默认8080)
-│   ├── pom.xml                 # Maven 依赖 (SpringBoot 3 + MyBatis-Plus)
-│   └── csv_import.py           # Python 一次性数据导入脚本
-├── frontend/                   # 原生前端工程
-│   ├── index.html              # 主页面 (F1-F8 布局)
-│   ├── style.css               # 页面样式与响应式布局
-│   └── js/                     # 核心逻辑层
-│       ├── echarts.min.js      # 本地 ECharts 引擎
-│       ├── api.js              # 数据请求层（封装 fetch，含降级容错）
-│       ├── charts.js           # 图表渲染层（封装 ECharts 实例）
-│       └── main.js             # 主控逻辑（事件绑定、数据分发、前端聚合计算）
+│   │   ├── BackendApplication.java       # 启动类
+│   │   ├── config/CorsConfig.java        # 全局 CORS 跨域配置
+│   │   ├── controller/
+│   │   │   ├── OrderController.java      # 订单统计接口（F1/F5/F6/F8）
+│   │   │   └── ForecastController.java   # 商家建议预测接口（F9）
+│   │   ├── dto/ForecastResponse.java     # 预测接口返回结构
+│   │   ├── entity/TOrders.java           # 订单实体
+│   │   ├── mapper/TOrdersMapper.java     # MyBatis-Plus Mapper
+│   │   ├── service/
+│   │   │   ├── TOrdersService.java       # 订单服务接口
+│   │   │   ├── impl/TOrdersServiceImpl.java
+│   │   │   └── ForecastService.java      # 预测算法（F9）
+│   │   └── ...
+│   ├── src/main/resources/application.yml # 端口 8080、数据库连接
+│   ├── pom.xml                           # Maven 依赖
+│   └── csv_import.py                     # Python 一次性数据导入脚本
+├── frontend/                             # 原生前端工程
+│   ├── index.html                        # 页面结构：F1–F9 各区块的 DOM
+│   ├── style.css                         # 全部样式（卡片/图表/建议模块/响应式）
+│   └── js/
+│       ├── echarts.min.js                # 本地 ECharts 引擎（第三方库）
+│       ├── api.js                        # 数据请求层：拼接口、超时、字段归一化
+│       ├── charts.js                     # 图表层：ECharts 实例与空状态
+│       └── main.js                       # 主控层：状态、接口编排、交互、渲染
 ├── sql/
-│   └── create_table.sql        # MySQL 建表脚本
-└── README.md                   # 项目说明文档
+│   └── create_table.sql                  # 建库建表脚本
+├── data/
+│   └── generate_orders.py                # 旧的数据生成脚本（当前未使用）
+└── README.md
 ```
 
 ---
@@ -53,32 +65,127 @@ ecommerce-dashboard
 ## 🗄️ 数据库说明
 
 - **数据库名**：`ecommerce_dashboard`
-- **数据表**：`t_orders` (电商订单表)
-- **核心字段**：
-  - `order_no` (订单号), `goods_name` (商品名), `category` (品类)
-  - `unit_price` (单价), `quantity` (数量), `total_amount` (总金额)
-  - `order_time` (下单时间), `user_id` (用户ID), `user_type` (用户类型), `pay_method` (支付方式)
+- **数据表**：`t_orders`（电商订单表）
+- **字段**：`order_no`（订单号）、`goods_name`（商品名）、`category`（品类）、`unit_price`（单价）、`quantity`（数量）、`total_amount`（金额）、`order_time`（下单时间）、`user_id`（用户ID）、`user_type`（用户类型）、`pay_method`（支付方式）
+
+初始化（脚本里已包含 `CREATE DATABASE` 和 `USE`）：
+
+```bash
+mysql -u root -p < sql/create_table.sql
+```
 
 ---
 
-## 🔌 后端接口文档
+## 🚀 启动步骤
 
-后端启动后，访问 Swagger 接口文档：**http://127.0.0.1:8080/swagger-ui.html**
+### 0. 环境要求
 
-| 接口地址 | 请求方式 | 功能说明 | 对应前端功能 |
+| 软件 | 版本 | 检查命令 |
+| :--- | :--- | :--- |
+| JDK | **17 或 21**（推荐 21） | `java -version` |
+| Maven | 3.8+ | `mvn -v`（没有的话用 IDEA 自带的） |
+| MySQL | 8.0+ | 服务已启动，能登录 |
+| 浏览器 | Chrome / Edge 等现代浏览器 | — |
+
+### 1. 克隆代码
+
+```bash
+git clone https://github.com/dds2186698527-hub/E-commerce-Sales-Data-Insights-Dashboard.git
+cd E-commerce-Sales-Data-Insights-Dashboard
+```
+
+### 2. 建库建表
+
+```bash
+mysql -u root -p < sql/create_table.sql
+```
+
+### 3. 配置数据库连接
+
+编辑 `backend/src/main/resources/application.yml`，把密码改成**你自己电脑上 MySQL 的密码**：
+
+```yaml
+server:
+  port: 8080
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/ecommerce_dashboard?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 你的密码
+```
+
+### 4. 编译后端
+
+```bash
+cd backend
+mvn clean package -DskipTests
+```
+
+产物：`target/backend-0.0.1-SNAPSHOT.jar`。
+
+
+### 5. 启动后端
+
+```bash
+java -jar target/backend-0.0.1-SNAPSHOT.jar
+```
+
+或在 IDEA 里配置 **Project SDK = JDK 17/21** 后直接运行 `BackendApplication`。
+
+看到 `Tomcat started on port(s): 8080` 即成功。
+
+
+### 6. 打开前端
+
+前端是纯静态页面，**不需要构建、不需要起服务**：
+
+- 直接双击 `frontend/index.html`（后端已配置 `Access-Control-Allow-Origin: *`，`file://` 也能跨域请求）；
+- 或者起个静态服务器：`cd frontend && python -m http.server 5173`，再访问 <http://127.0.0.1:5173>。
+
+页面加载后会自动请求 8080，KPI、图表、表格、商家建议都会有数据。
+
+
+### 7. 停止
+
+- 命令行：`Ctrl + C`
+- Windows 上按端口杀进程：`netstat -ano | findstr :8080` → `taskkill /PID <pid> /F`
+
+---
+
+## 🔌 接口文档
+
+后端启动后访问 Swagger：**http://127.0.0.1:8080/swagger-ui.html**
+
+| 接口 | 请求方式 | 功能 | 对应前端 |
 | :--- | :--- | :--- | :--- |
-| `/api/order/total` | GET | 整体订单汇总（总数、总销售额） | **F1** KPI 卡片 |
-| `/api/order/category/sales` | GET | 按品类统计销售额 | **F5** 品类柱状图、**F7** 饼图 |
+| `/api/order/total` | GET | 订单总数 + 销售总额 | **F1** KPI |
+| `/api/order/category/sales` | GET | 按品类销售额 | **F5** 柱状图、**F7** 饼图 |
 | `/api/order/goods/top10` | GET | 商品销量 TOP10 | **F6** 横向柱状图 |
-| `/api/order/list` | GET | 查询全部订单明细数据 | **F8** 数据表格 (前端分页) |
-
-> **技术说明**：后端已通过 `CorsConfig.java` 配置全局跨域，支持前端本地调试。受限于开发周期，后端暂未提供 `/api/orders`（带条件分页查询）及按时间趋势聚合的接口，前端已通过拉取全量数据进行本地聚合与筛选来满足 F2/F3/F4 的需求。
+| `/api/order/list` | GET | 全部订单明细 | **F8** 表格（前端分页） |
+| `/api/forecast?horizon=7\|30\|90&metric=revenue\|qty` | GET | 未来区间销量/销售额预测 + 备货建议 | **F9** 商家建议 |
 
 ---
 
-## 📝 开发里程碑记录
+## ⚠️ 常见问题排查
+
+| 现象 | 原因 / 解决 |
+| :--- | :--- |
+| 页面顶部黄色提示「无法连接后端」 | 8080 没起来，或被防火墙拦截；先 `curl http://127.0.0.1:8080/api/order/total` 验证 |
+| 启动报 `Port 8080 was already in use` | 端口被占：换 `server.port`，或杀掉旧 java 进程 |
+| 启动报 `Access denied for user 'root'@'localhost'` | `application.yml` 里的密码和你本机 MySQL 不一致 |
+| 启动报 `Unknown database 'ecommerce_dashboard'` | 没执行 `sql/create_table.sql` |
+| 页面「暂无订单数据（数据库 t_orders 没有记录）」 | 只建了表没导数据，见「📥 导入数据」 |
+| 编译报 Lombok / `JCTree` 相关错误 | JDK 版本过高（25/26），换成 JDK 17 或 21 |
+| 编译卡在下载依赖 | 配置 Maven 阿里云镜像，或换网络 |
+| `mvn` 命令不存在 | 用 IDEA 自带 Maven，或安装 Maven 并配置 `MAVEN_HOME` |
+| 前端图表空白、KPI 显示「—」 | 检查 `frontend/js/echarts.min.js` 是否为完整文件（约 1 MB，不能是 0 字节） |
+| 换后端端口 / 换机器后前端连不上 | 改 `frontend/js/api.js` 里的 `API_BASE_URL` |
+
+---
+
+## 🗓️ 开发里程碑记录
 
 - **第 2 周**：Git 仓库初始化，数据集准备，SQL 建表脚本完成。
 - **第 3 周**：重构后端为 Spring Boot 3 架构，编写数据导入脚本，完成基础统计接口开发。
-- **第 4-6 周**：完成前端 F1-F8 静态原型，引入本地 ECharts。将 JS 模块化拆分（api.js, charts.js, main.js）。完成与后端的真实接口对接，实现降级容错策略。
-- **第 7 周（当前）**：前后端联调完善，解决 CORS 跨域问题。前端利用本地计算补齐了后端缺失的时间聚合与条件筛选逻辑。
+- **第 4-6 周**：完成前端 F1-F8 静态原型，引入本地 ECharts，JS 模块化拆分（api.js / charts.js / main.js），完成真实接口对接与降级容错。
+- **第 7 周**：前后端联调，解决 CORS；前端本地聚合补齐时间趋势与条件筛选；统一 21,000 条真实订单入库。新增 F9 商家建议模块（销量/销售额预测 + 备货建议），前端补充空状态与文件职责注释。

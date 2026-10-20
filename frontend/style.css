@@ -1,3 +1,9 @@
+/*
+ * style.css —— 看板全部样式
+ * 负责：颜色变量、KPI 卡片、筛选条、图表容器、商家建议模块、明细表、分页、响应式布局。
+ * 不包含任何业务逻辑；结构由 index.html 提供，交互由 js/main.js 控制。
+ */
+
 /* ===== 全局 ===== */
 :root {
     --brand: #5470c6;
@@ -259,9 +265,130 @@ tr.table-empty td {
 
 .updated-at { font-size: 12px; color: #a7afbd; }
 
+/* ===== F9 商家建议 ===== */
+.advice-panel {
+    background: #fff;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: var(--card-shadow);
+}
+
+.advice-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.advice-head-text h3 { font-size: 16px; color: var(--text); margin-bottom: 6px; }
+.advice-sub { font-size: 12px; color: #a7afbd; line-height: 1.5; }
+
+.advice-controls { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.seg {
+    display: inline-flex;
+    gap: 2px;
+    background: #f2f4f8;
+    border-radius: 6px;
+    padding: 3px;
+}
+
+.seg button {
+    border: none;
+    background: transparent;
+    color: #5b6577;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.seg button:hover { color: var(--brand); }
+.seg button.active {
+    background: #fff;
+    color: var(--brand);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(15, 30, 60, .08);
+}
+
+.advice-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.advice-kpi {
+    background: #f8fafd;
+    border: 1px solid #eef2f8;
+    border-radius: 6px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.advice-kpi span { font-size: 12px; color: var(--muted); }
+.advice-kpi strong {
+    font-size: 18px;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.advice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.advice-table-wrap {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 350px;
+}
+
+.advice-table th,
+.advice-table td { padding: 8px 10px; font-size: 13px; }
+
+.advice-table tbody tr:hover { background: #fafcff; }
+
+.growth.up { color: var(--brand); }
+.growth.down { color: #ee6666; }
+.growth.flat { color: var(--muted); }
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.badge-up { background: #eef3ff; color: #3f5bb5; }
+.badge-down { background: #fff0f0; color: #c0392b; }
+.badge-flat { background: #f2f4f8; color: var(--muted); }
+
+.advice-tip {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: #f7f9ff;
+    border-left: 3px solid var(--brand);
+    border-radius: 4px;
+    font-size: 13px;
+    color: #4a5568;
+    line-height: 1.6;
+}
+
 /* ===== 响应式 ===== */
 @media (max-width: 960px) {
-    .charts-grid { grid-template-columns: 1fr; }
+    .charts-grid,
+    .advice-grid { grid-template-columns: 1fr; }
     .chart-box { height: 300px; }
+    .advice-summary { grid-template-columns: repeat(2, 1fr); }
+    .advice-head { flex-direction: column; }
     body { padding: 12px; }
 }

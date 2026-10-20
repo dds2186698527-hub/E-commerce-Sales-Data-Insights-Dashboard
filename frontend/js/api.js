@@ -1,7 +1,8 @@
 /*
- * api.js —— 数据请求层
- * 只负责：请求后端、超时/异常处理、字段归一化，不操作 DOM。
- * 后端：Spring Boot，server.port=8080，接口前缀 /api/order
+ * api.js —— 数据请求层（前端唯一和后端通信的地方）
+ * 职责：拼接口地址、设置超时、统一异常处理、把后端原始 JSON 归一化成前端好用的结构。
+ * 不负责：DOM 操作和图表渲染（分别在 main.js / charts.js）。
+ * 依赖：后端 Spring Boot（默认 http://127.0.0.1:8080），接口前缀 /api/order、/api/forecast。
  */
 (function (global) {
     'use strict';
@@ -13,7 +14,8 @@
         total: '/api/order/total',            // 订单总数 + 销售总额
         categorySales: '/api/order/category/sales', // 按品类销售额
         goodsTop10: '/api/order/goods/top10', // 商品销量 TOP10
-        orderList: '/api/order/list'          // 订单明细
+        orderList: '/api/order/list',         // 订单明细
+        forecast: '/api/forecast'             // 商家建议：未来 7/30/90 天销量或销售额预测
     };
 
     var REQUEST_TIMEOUT = 8000;
@@ -132,12 +134,54 @@
         });
     }
 
+    // F9 商家建议：预测未来 N 天各商品的销售额/销量
+    // 返回 { horizonDays, metric, baseDate, items[], categories[], summary }
+    function fetchForecast(horizonDays, metric) {
+        var query = '?horizon=' + encodeURIComponent(horizonDays) + '&metric=' + encodeURIComponent(metric);
+        return request(ENDPOINTS.forecast + query).then(function (raw) {
+            raw = raw || {};
+            var summary = raw.summary || {};
+            return {
+                horizonDays: toNumber(pick(raw, ['horizonDays', 'horizon_days'])),
+                metric: toText(pick(raw, ['metric'])) || metric,
+                baseDate: toText(pick(raw, ['baseDate', 'base_date'])),
+                items: (raw.items || []).map(function (item) {
+                    return {
+                        goodsName: toText(pick(item, ['goodsName', 'goods_name'])) || '未知商品',
+                        category: toText(pick(item, ['category'])) || '未分类',
+                        predicted: toNumber(pick(item, ['predicted'])),
+                        predictedQty: toNumber(pick(item, ['predictedQty', 'predicted_qty'])),
+                        recent: toNumber(pick(item, ['recent'])),
+                        growthRate: toNumber(pick(item, ['growthRate', 'growth_rate'])),
+                        advice: toText(pick(item, ['advice']))
+                    };
+                }),
+                categories: (raw.categories || []).map(function (item) {
+                    return {
+                        category: toText(pick(item, ['category'])) || '未分类',
+                        predicted: toNumber(pick(item, ['predicted'])),
+                        predictedQty: toNumber(pick(item, ['predictedQty', 'predicted_qty'])),
+                        growthRate: toNumber(pick(item, ['growthRate', 'growth_rate']))
+                    };
+                }),
+                summary: {
+                    totalPredicted: toNumber(pick(summary, ['totalPredicted', 'total_predicted'])),
+                    totalPredictedQty: toNumber(pick(summary, ['totalPredictedQty', 'total_predicted_qty'])),
+                    growing: toNumber(pick(summary, ['growing'])),
+                    declining: toNumber(pick(summary, ['declining'])),
+                    tip: toText(pick(summary, ['tip']))
+                }
+            };
+        });
+    }
+
     global.Api = {
         BASE_URL: API_BASE_URL,
         ENDPOINTS: ENDPOINTS,
         fetchSummary: fetchSummary,
         fetchCategorySales: fetchCategorySales,
         fetchGoodsTop10: fetchGoodsTop10,
-        fetchOrderList: fetchOrderList
+        fetchOrderList: fetchOrderList,
+        fetchForecast: fetchForecast
     };
 })(window);
