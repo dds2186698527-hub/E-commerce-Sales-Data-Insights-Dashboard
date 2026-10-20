@@ -128,6 +128,17 @@
             .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
     }
 
+    // F7：用户行为饼图数据（新老用户订单数占比）
+    function aggregateUserBehavior(rows) {
+        var map = new Map();
+        rows.forEach(function (order) {
+            var type = order.userType === 'new' ? '新用户' : (order.userType === 'old' ? '老用户' : '未知');
+            map.set(type, (map.get(type) || 0) + 1);
+        });
+        return Array.from(map.entries())
+            .map(function (item) { return { category: item[0], saleTotal: item[1] }; });
+    }
+
     /* ---------- 渲染 ---------- */
     function setText(el, text) {
         if (el) el.textContent = text;
@@ -169,11 +180,12 @@
         var categoryRows = filtered || !state.categoryRows ? aggregateCategories(rows) : state.categoryRows;
         var topRows = filtered || !state.topGoods ? aggregateTopGoods(rows) : state.topGoods;
         var trendRows = aggregateTrend(rows);
+        var userRows = aggregateUserBehavior(rows);
 
         Charts.renderTrend(els.chartLine, trendRows);
         Charts.renderCategoryBar(els.chartBar, categoryRows);
         Charts.renderTop10(els.chartTop10, topRows);
-        Charts.renderCategoryPie(els.chartPie, categoryRows);
+        Charts.renderCategoryPie(els.chartPie, userRows);
     }
 
     function renderTable(rows) {
@@ -439,6 +451,18 @@
         [els.start, els.end].forEach(function (input) {
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter') applyFilters();
+            });
+        });
+
+        // F3 快捷选项：近7天/近30天/近90天
+        document.querySelectorAll('.quick-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var days = Number(btn.getAttribute('data-days')) || 7;
+                var today = new Date();
+                var start = new Date(today.getTime() - (days - 1) * 86400000);
+                els.end.value = today.toISOString().slice(0, 10);
+                els.start.value = start.toISOString().slice(0, 10);
+                applyFilters();
             });
         });
 
