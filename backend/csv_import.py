@@ -1,6 +1,7 @@
 import pymysql
 import pandas as pd
 import os
+import random
 
 # 数据库配置
 db_config = {
@@ -23,7 +24,7 @@ df = pd.read_csv(csv_path, encoding="utf-8")
 print("CSV列名：", df.columns.tolist())
 print("CSV总行数：", len(df))
 
-# 2. 字段映射
+# 2. 字段映射（注意：CSV 中的"用户性别"列不导入，表结构中无性别字段）
 df = df.rename(columns={
     "用户ID": "user_id",
     "商品名称": "goods_name",
@@ -31,14 +32,14 @@ df = df.rename(columns={
     "单价": "unit_price",
     "购买数量": "quantity",
     "消费金额": "total_amount",
-    "购买时间": "order_time",
-    "用户性别": "user_type"
+    "购买时间": "order_time"
 })
 
 # 重点：CSV没有订单号，新增order_no，自动生成1,2,3...
 df["order_no"] = range(1, len(df) + 1)
-# pay_method表中有，CSV没有，给个默认值
-df["pay_method"] = "未知"
+# CSV 没有 user_type / pay_method 字段，按合理分布随机填充
+df["user_type"] = [random.choice(["new", "old"]) for _ in range(len(df))]
+df["pay_method"] = [random.choice(["微信", "支付宝", "银行卡"]) for _ in range(len(df))]
 
 # 只保留表需要的列
 cols = ["order_no", "goods_name", "category", "unit_price", "quantity",

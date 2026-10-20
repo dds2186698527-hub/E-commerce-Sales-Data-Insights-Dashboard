@@ -126,7 +126,9 @@
                     quantity: toNumber(pick(row, ['quantity'])),
                     totalAmount: toNumber(pick(row, ['total_amount', 'totalAmount'])),
                     orderTime: toDateTime(pick(row, ['order_time', 'orderTime'])),
-                    userId: toText(pick(row, ['user_id', 'userId']))
+                    userId: toText(pick(row, ['user_id', 'userId'])),
+                    userType: toText(pick(row, ['user_type', 'userType'])),
+                    payMethod: toText(pick(row, ['pay_method', 'payMethod']))
                 };
             });
         });
