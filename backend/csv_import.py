@@ -8,7 +8,7 @@ db_config = {
     "host": "127.0.0.1",
     "port": 3306,
     "user": "root",
-    "password": "123456",  # 改成你的mysql密码
+    "password": "060831",  # 改成你的mysql密码
     "database": "ecommerce_dashboard",
     "charset": "utf8mb4"
 }

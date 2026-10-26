@@ -50,6 +50,23 @@
             .replace(/'/g, '&#39;');
     }
 
+    // 日期转 yyyy-MM-dd（按本地时区，避免 toISOString 在凌晨差一天）
+    function toLocalDateString(date) {
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        return date.getFullYear() + '-' + month + '-' + day;
+    }
+
+    // 订单数据里的最后一天（近7/30/90天以它为终点，而不是系统今天）
+    function latestOrderDate() {
+        var latest = '';
+        state.orders.forEach(function (order) {
+            var date = (order.orderTime || '').slice(0, 10);
+            if (date > latest) latest = date;
+        });
+        return latest;
+    }
+
     function sumBy(rows, field) {
         return rows.reduce(function (acc, row) {
             var n = Number(row[field]);
@@ -454,14 +471,15 @@
             });
         });
 
-        // F3 快捷选项：近7天/近30天/近90天
+        // F3 快捷选项：近7天/近30天/近90天（以数据里的最后一天为终点）
         document.querySelectorAll('.quick-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 var days = Number(btn.getAttribute('data-days')) || 7;
-                var today = new Date();
-                var start = new Date(today.getTime() - (days - 1) * 86400000);
-                els.end.value = today.toISOString().slice(0, 10);
-                els.start.value = start.toISOString().slice(0, 10);
+                var latest = latestOrderDate();
+                var endDate = latest ? new Date(latest + 'T00:00:00') : new Date();
+                var startDate = new Date(endDate.getTime() - (days - 1) * 86400000);
+                els.end.value = toLocalDateString(endDate);
+                els.start.value = toLocalDateString(startDate);
                 applyFilters();
             });
         });
