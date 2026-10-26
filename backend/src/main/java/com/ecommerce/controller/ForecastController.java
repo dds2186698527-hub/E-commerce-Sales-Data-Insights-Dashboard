@@ -1,5 +1,6 @@
 package com.ecommerce.controller;
 
+import com.ecommerce.common.Result;
 import com.ecommerce.dto.ForecastResponse;
 import com.ecommerce.service.ForecastService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,9 +26,9 @@ public class ForecastController {
 
     @GetMapping
     @Operation(summary = "预测未来 7/30/90 天商品销售额或销量，并给出备货建议")
-    public ForecastResponse forecast(
+    public Result<ForecastResponse> forecast(
             @RequestParam(defaultValue = "30") int horizon,
             @RequestParam(defaultValue = "revenue") String metric) {
-        return forecastService.forecast(horizon, metric);
+        return Result.success(forecastService.forecast(horizon, metric));
     }
 }

@@ -3,6 +3,7 @@
  * 职责：维护页面状态、并发调用接口、处理筛选/分页交互、渲染 KPI、明细表、商家建议模块。
  * 不负责：具体请求细节（api.js）、具体图表样式（charts.js）。
  * 依赖：window.Api（api.js）、window.Charts（charts.js）。
+ * 关键约定：筛选/聚合/翻页都走后端（筛选结果由后端 WHERE 完成，不是前端本地假过滤）。
  */
 (function (global) {
     'use strict';
@@ -13,16 +14,22 @@
     var PAGE_SIZE = 10;
 
     var state = {
-        orders: [],          // 全量订单明细（/api/order/list）
-        summary: null,       // 后端汇总（/api/order/total）
-        categoryRows: null,  // 后端品类销售额（/api/order/category/sales）
-        topGoods: null,      // 后端商品 TOP10（/api/order/goods/top10）
-        forecast: null,      // 商家建议预测（/api/forecast）
-        forecastHorizon: 30, // 预测区间：7 / 30 / 90 天
+        summary: null,        // 后端 KPI（/api/orders/kpi）
+        categoryRows: null,   // 后端品类销售额（/api/orders/category-sales）
+        topGoods: null,       // 后端商品 TOP10（/api/orders/ranking）
+        trendRows: null,      // 后端时间趋势（/api/orders/stats）
+        userRows: null,       // 后端新老用户占比（/api/orders/user-type）
+        categories: [],       // 后端品类列表（/api/categories）
+        pageRows: [],         // 后端分页订单（/api/orders）
+        totalRows: 0,
+        totalPages: 1,
+        page: 1,
+        size: PAGE_SIZE,
+        forecast: null,       // 商家建议预测（/api/forecast）
+        forecastHorizon: 30,  // 预测区间：7 / 30 / 90 天
         forecastMetric: 'revenue', // 预测指标：revenue 销售额 / qty 销量
         forecastError: '',
         filters: { category: '', start: '', end: '' },
-        page: 1,
         loading: false,
         failures: []
     };
@@ -57,103 +64,19 @@
         return date.getFullYear() + '-' + month + '-' + day;
     }
 
-    // 订单数据里的最后一天（近7/30/90天以它为终点，而不是系统今天）
-    function latestOrderDate() {
-        var latest = '';
-        state.orders.forEach(function (order) {
-            var date = (order.orderTime || '').slice(0, 10);
-            if (date > latest) latest = date;
-        });
-        return latest;
-    }
-
-    function sumBy(rows, field) {
-        return rows.reduce(function (acc, row) {
-            var n = Number(row[field]);
-            return acc + (isFinite(n) ? n : 0);
-        }, 0);
-    }
-
-    /* ---------- 数据聚合（筛选结果由后端查询返回，这里只做展示层聚合） ---------- */
-    function filteredOrders() {
-        var f = state.filters;
-        return state.orders.filter(function (order) {
-            if (f.category && order.category !== f.category) return false;
-            var date = (order.orderTime || '').slice(0, 10);
-            if (f.start && date && date < f.start) return false;
-            if (f.end && date && date > f.end) return false;
-            return true;
-        });
-    }
-
     function hasFilter() {
         var f = state.filters;
         return Boolean(f.category || f.start || f.end);
     }
 
-    function summarize(rows) {
-        return { count: rows.length, sales: sumBy(rows, 'totalAmount') };
-    }
-
-    // 热销商品数：按商品汇总销量，销量 ≥ 平均单商品销量的商品个数
-    function hotGoodsCount(rows) {
-        if (!rows.length) return null;
-        var byGoods = new Map();
-        rows.forEach(function (order) {
-            var key = order.goodsName || '未知商品';
-            byGoods.set(key, (byGoods.get(key) || 0) + (order.quantity || 0));
+    // 订单数据里的最后一天（近7/30/90天以它为终点，而不是系统今天；来自后端趋势数据的最大日期）
+    function latestOrderDate() {
+        var latest = '';
+        (state.trendRows || []).forEach(function (row) {
+            var date = String(row.date || '').slice(0, 10);
+            if (date > latest) latest = date;
         });
-        var quantities = Array.from(byGoods.values());
-        var total = quantities.reduce(function (a, b) { return a + b; }, 0);
-        var average = total / quantities.length;
-        if (!(average > 0)) return null;
-        return quantities.filter(function (q) { return q >= average; }).length;
-    }
-
-    function aggregateCategories(rows) {
-        var map = new Map();
-        rows.forEach(function (order) {
-            var key = order.category || '未分类';
-            map.set(key, (map.get(key) || 0) + (order.totalAmount || 0));
-        });
-        return Array.from(map.entries())
-            .map(function (item) { return { category: item[0], saleTotal: item[1] }; })
-            .sort(function (a, b) { return b.saleTotal - a.saleTotal; });
-    }
-
-    function aggregateTopGoods(rows) {
-        var map = new Map();
-        rows.forEach(function (order) {
-            var key = order.goodsName || '未知商品';
-            map.set(key, (map.get(key) || 0) + (order.quantity || 0));
-        });
-        return Array.from(map.entries())
-            .map(function (item) { return { goodsName: item[0], totalQty: item[1] }; })
-            .sort(function (a, b) { return b.totalQty - a.totalQty; })
-            .slice(0, 10);
-    }
-
-    function aggregateTrend(rows) {
-        var map = new Map();
-        rows.forEach(function (order) {
-            var date = (order.orderTime || '').slice(0, 10);
-            if (!date) return;
-            map.set(date, (map.get(date) || 0) + (order.totalAmount || 0));
-        });
-        return Array.from(map.entries())
-            .map(function (item) { return { date: item[0], sales: item[1] }; })
-            .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
-    }
-
-    // F7：用户行为饼图数据（新老用户订单数占比）
-    function aggregateUserBehavior(rows) {
-        var map = new Map();
-        rows.forEach(function (order) {
-            var type = order.userType === 'new' ? '新用户' : (order.userType === 'old' ? '老用户' : '未知');
-            map.set(type, (map.get(type) || 0) + 1);
-        });
-        return Array.from(map.entries())
-            .map(function (item) { return { category: item[0], saleTotal: item[1] }; });
+        return latest;
     }
 
     /* ---------- 渲染 ---------- */
@@ -161,62 +84,40 @@
         if (el) el.textContent = text;
     }
 
-    function renderKpi(rows) {
-        var filtered = hasFilter();
+    function renderKpi() {
         // 至少有一个数据来源才显示数字，否则一律显示占位符，避免用假数据冒充
-        var hasSource = state.summary !== null || state.orders.length > 0;
-
+        var hasSource = state.summary !== null || state.pageRows.length > 0;
         if (!hasSource) {
             setText(els.sales, '—');
             setText(els.orders, '—');
             setText(els.avg, '—');
+            setText(els.quantity, '—');
             setText(els.hot, '—');
             return;
         }
 
-        var kpi;
-        if (filtered) {
-            kpi = summarize(rows);
-        } else if (state.summary) {
-            kpi = { count: state.summary.orderCount, sales: state.summary.totalSales };
-        } else {
-            // /total 失败但明细可用：用明细兜底
-            kpi = summarize(state.orders);
-        }
-
-        setText(els.sales, money(kpi.sales));
-        setText(els.orders, kpi.count.toLocaleString('zh-CN'));
-        setText(els.avg, kpi.count > 0 ? money(kpi.sales / kpi.count, 2) : '—');
-
-        var hot = hotGoodsCount(filtered ? rows : state.orders);
-        setText(els.hot, hot === null ? '—' : String(hot));
+        var kpi = state.summary || {};
+        setText(els.sales, money(kpi.totalSales));
+        setText(els.orders, (kpi.orderCount || 0).toLocaleString('zh-CN'));
+        setText(els.avg, (kpi.orderCount || 0) > 0 ? money(kpi.avgOrderValue, 2) : '—');
+        setText(els.quantity, (kpi.totalQuantity || 0).toLocaleString('zh-CN') + ' 件');
+        var hot = kpi.hotGoodsCount;
+        setText(els.hot, hot === null || hot === undefined ? '—' : String(hot));
     }
 
-    function renderCharts(rows) {
-        var filtered = hasFilter();
-        var categoryRows = filtered || !state.categoryRows ? aggregateCategories(rows) : state.categoryRows;
-        var topRows = filtered || !state.topGoods ? aggregateTopGoods(rows) : state.topGoods;
-        var trendRows = aggregateTrend(rows);
-        var userRows = aggregateUserBehavior(rows);
-
-        Charts.renderTrend(els.chartLine, trendRows);
-        Charts.renderCategoryBar(els.chartBar, categoryRows);
-        Charts.renderTop10(els.chartTop10, topRows);
-        Charts.renderCategoryPie(els.chartPie, userRows);
+    function renderCharts() {
+        Charts.renderTrend(els.chartLine, state.trendRows || []);
+        Charts.renderCategoryBar(els.chartBar, state.categoryRows || []);
+        Charts.renderTop10(els.chartTop10, state.topGoods || []);
+        Charts.renderCategoryPie(els.chartPie, state.userRows || []);
     }
 
-    function renderTable(rows) {
-        var sorted = rows.slice().sort(function (a, b) {
-            var byTime = String(b.orderTime || '').localeCompare(String(a.orderTime || ''));
-            return byTime !== 0 ? byTime : (b.id || 0) - (a.id || 0);
-        });
-
-        var pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+    function renderTable() {
+        var pageRows = state.pageRows || [];
+        var total = state.totalRows || 0;
+        var pages = Math.max(1, state.totalPages || Math.ceil(total / state.size));
         if (state.page > pages) state.page = pages;
         if (state.page < 1) state.page = 1;
-
-        var start = (state.page - 1) * PAGE_SIZE;
-        var pageRows = sorted.slice(start, start + PAGE_SIZE);
 
         if (!pageRows.length) {
             var emptyMessage = hasFilter()
@@ -240,14 +141,11 @@
         els.next.disabled = state.page >= pages;
         setText(els.tableSummary,
             (state.failures.length ? '数据未加载完整 · ' : '') +
-            '共 ' + sorted.length + ' 条' + (hasFilter() ? '（已应用筛选）' : ''));
+            '共 ' + total + ' 条' + (hasFilter() ? '（已应用筛选）' : ''));
     }
 
     function renderCategoryOptions() {
-        var names = new Set();
-        (state.categoryRows || []).forEach(function (row) { if (row.category) names.add(row.category); });
-        state.orders.forEach(function (order) { if (order.category) names.add(order.category); });
-
+        var names = new Set((state.categories || []).map(function (name) { return String(name); }));
         var current = els.select.value;
         var options = ['<option value="">全部品类</option>'].concat(
             Array.from(names).sort().map(function (name) {
@@ -259,10 +157,9 @@
     }
 
     function renderAll() {
-        var rows = filteredOrders();
-        renderKpi(rows);
-        renderCharts(rows);
-        renderTable(rows);
+        renderKpi();
+        renderCharts();
+        renderTable();
         renderCategoryOptions();
         renderForecast();
     }
@@ -358,6 +255,7 @@
     }
 
     /* ---------- 数据加载 ---------- */
+    // 全量加载：KPI/品类/TOP10/趋势/饼图/品类选项/分页订单/商家建议 全部走后端（携带当前筛选条件）
     function loadAll() {
         if (state.loading) return;
         state.loading = true;
@@ -365,11 +263,19 @@
         setText(els.updated, '加载中…');
         showStatus([]);
 
+        var filters = state.filters;
         var tasks = [
-            { name: '汇总指标', run: Api.fetchSummary, done: function (d) { state.summary = d; } },
-            { name: '品类销售', run: Api.fetchCategorySales, done: function (d) { state.categoryRows = d; } },
-            { name: '商品 TOP10', run: Api.fetchGoodsTop10, done: function (d) { state.topGoods = d; } },
-            { name: '订单明细', run: Api.fetchOrderList, done: function (d) { state.orders = d; } },
+            { name: '汇总指标', run: function () { return Api.fetchSummary(filters); }, done: function (d) { state.summary = d; } },
+            { name: '品类销售', run: function () { return Api.fetchCategorySales(filters); }, done: function (d) { state.categoryRows = d; } },
+            { name: '商品 TOP10', run: function () { return Api.fetchGoodsTop10('qty', filters); }, done: function (d) { state.topGoods = d; } },
+            { name: '销售趋势', run: function () { return Api.fetchStats(filters, 'day'); }, done: function (d) { state.trendRows = d; } },
+            { name: '用户占比', run: function () { return Api.fetchUserType(filters); }, done: function (d) { state.userRows = d; } },
+            { name: '品类选项', run: function () { return Api.fetchCategories(); }, done: function (d) { state.categories = d || []; } },
+            {
+                name: '订单明细',
+                run: function () { return Api.fetchOrdersPage(state.page, state.size, filters); },
+                done: function (d) { state.pageRows = d.list; state.totalRows = d.total; state.totalPages = d.totalPages; }
+            },
             {
                 name: '商家建议',
                 run: function () { return Api.fetchForecast(state.forecastHorizon, state.forecastMetric); },
@@ -413,37 +319,41 @@
             });
     }
 
-    /* ---------- 事件 ---------- */
-    // 筛选走后端查询（/api/orders/list?category=&startDate=&endDate=），不是前端本地假过滤
-    function loadFilteredOrders() {
-        var applied = state.filters;
+    // 分页：只向后端请求某一页（翻页真正走后端，不把全量拉到本地）
+    function loadPage(n) {
+        if (state.loading) return;
+        state.loading = true;
         setText(els.updated, '查询中…');
-        showStatus([]);
-        Api.fetchOrderList(applied)
-            .then(function (rows) {
-                state.orders = rows;
-                // 本次结果集由后端筛选而来，KPI/图表改用该结果重新聚合
-                state.summary = null;
-                state.categoryRows = null;
-                state.topGoods = null;
-                renderAll();
-                setText(els.updated, '查询完成 · ' + rows.length + ' 条 · ' +
-                    new Date().toLocaleTimeString('zh-CN'));
+        Api.fetchOrdersPage(n, state.size, state.filters)
+            .then(function (d) {
+                state.page = d.page || n;
+                state.pageRows = d.list;
+                state.totalRows = d.total;
+                state.totalPages = d.totalPages;
+                state.loading = false;
+                renderTable();
+                setText(els.updated, '第 ' + state.page + ' 页 · ' + new Date().toLocaleTimeString('zh-CN'));
             })
             .catch(function (err) {
-                showStatus(['筛选查询失败：' + (err && err.message ? err.message : '请求失败')]);
-                setText(els.updated, '查询失败 · ' + new Date().toLocaleTimeString('zh-CN'));
+                state.loading = false;
+                showStatus(['订单分页查询失败：' + (err && err.message ? err.message : '请求失败')]);
             });
     }
 
+    // 筛选/重置：回到第 1 页并整页走后端重新查询
+    function loadFiltered() {
+        state.page = 1;
+        loadAll();
+    }
+
+    /* ---------- 事件 ---------- */
     function applyFilters() {
         state.filters = {
             category: els.select.value,
             start: els.start.value,
             end: els.end.value
         };
-        state.page = 1;
-        loadFilteredOrders();
+        loadFiltered();
     }
 
     function resetFilters() {
@@ -451,8 +361,7 @@
         els.start.value = '';
         els.end.value = '';
         state.filters = { category: '', start: '', end: '' };
-        state.page = 1;
-        loadAll();
+        loadFiltered();
     }
 
     function debounce(fn, wait) {
@@ -526,13 +435,11 @@
         });
 
         els.prev.addEventListener('click', function () {
-            state.page -= 1;
-            renderTable(filteredOrders());
+            if (state.page > 1) loadPage(state.page - 1);
         });
 
         els.next.addEventListener('click', function () {
-            state.page += 1;
-            renderTable(filteredOrders());
+            if (state.page < (state.totalPages || 1)) loadPage(state.page + 1);
         });
 
         els.retry.addEventListener('click', loadAll);
@@ -546,6 +453,7 @@
             orders: $('kpi-orders'),
             avg: $('kpi-avg'),
             hot: $('kpi-hot'),
+            quantity: $('kpi-quantity'),
             select: $('category-select'),
             start: $('start-date'),
             end: $('end-date'),
