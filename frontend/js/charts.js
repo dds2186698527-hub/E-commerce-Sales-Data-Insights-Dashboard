@@ -122,7 +122,16 @@
             xAxis: Object.assign({
                 type: 'category',
                 data: list.map(function (r) { return r.category; }),
-                axisLabel: { color: '#8a94a6', fontSize: 12, interval: 0, rotate: list.length > 6 ? 20 : 0 }
+                axisLabel: {
+                    color: '#8a94a6',
+                    fontSize: 12,
+                    interval: 0,
+                    lineHeight: 14,
+                    // 品类名竖排（每个字一行），避免斜着放互相重叠
+                    formatter: function (value) {
+                        return String(value).split('').join('\n');
+                    }
+                }
             }, { axisLine: { lineStyle: { color: '#d9dee7' } }, axisTick: { show: false } }),
             yAxis: {
                 type: 'value',
