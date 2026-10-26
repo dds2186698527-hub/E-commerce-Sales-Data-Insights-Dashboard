@@ -41,10 +41,7 @@ df["order_no"] = range(1, len(df) + 1)
 # user_type：新老用户判定
 # 规则：
 #   1) 若源数据里已含新老用户字段（新老用户 / 用户类型 / user_type），直接采用；
-#   2) 若没有该字段，则按用户ID首次下单时间判定：取所有用户首次下单时间的中位数作为阈值，
-#      并把阈值"靠前一点"（前移 SHIFT_DAYS 天），早于阈值首次下单的算老用户，晚于的算新用户。
-#      这样同一用户所有订单类型固定，且近7/30/90天既有新用户也有老用户。
-SHIFT_DAYS = 30   # 中位数阈值向前偏移的天数（"靠前一点"），可按需调整
+#   2) 若没有该字段，则按购买次数判定：同一用户ID购买 >= 2 次算老用户，仅购买 1 次算新用户。
 
 def _classify_user_type(df):
     # 1) 数据里已有新老用户字段 -> 直接用
@@ -55,16 +52,13 @@ def _classify_user_type(df):
                        else ("old" if ("老" in x or x in ("old", "o")) else "new"))
             print(f"✅ 数据含新老用户字段 {col}，直接采用")
             return ut
-    # 2) 无字段 -> 按首次下单时间，中位数阈值前移一点
-    first_order = df.groupby("user_id")["order_time_dt"].transform("min")
-    median = first_order.median()
-    threshold = median - pd.Timedelta(days=SHIFT_DAYS)
-    print(f"⚠️ 数据无新老用户字段，按首次下单时间判定：中位数 {median} 前移 {SHIFT_DAYS} 天 -> 阈值 {threshold}")
-    return first_order.apply(lambda t: "old" if t < threshold else "new")
+    # 2) 无字段 -> 按购买次数：同一用户ID >= 2 次购买为老用户，仅 1 次为新用户
+    cnt = df.groupby("user_id")["order_no"].transform("count")
+    ut = cnt.apply(lambda c: "old" if c >= 2 else "new")
+    print(f"⚠️ 数据无新老用户字段，按购买次数判定：同一用户购买 >=2 次为老用户，仅 1 次为新用户")
+    return ut
 
-df["order_time_dt"] = pd.to_datetime(df["order_time"])
 df["user_type"] = _classify_user_type(df)
-df = df.drop(columns=["order_time_dt"])   # 用赋值代替 inplace=True（新 pandas 已弃用 inplace）
 
 # pay_method：CSV里有"支付方式"列就直接用，没有则统一填"未知"
 if "支付方式" in df.columns:
