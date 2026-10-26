@@ -50,6 +50,23 @@
             .replace(/'/g, '&#39;');
     }
 
+    // 日期转 yyyy-MM-dd（按本地时区，避免 toISOString 在凌晨差一天）
+    function toLocalDateString(date) {
+        var month = String(date.getMonth() + 1).padStart(2, '0');
+        var day = String(date.getDate()).padStart(2, '0');
+        return date.getFullYear() + '-' + month + '-' + day;
+    }
+
+    // 订单数据里的最后一天（近7/30/90天以它为终点，而不是系统今天）
+    function latestOrderDate() {
+        var latest = '';
+        state.orders.forEach(function (order) {
+            var date = (order.orderTime || '').slice(0, 10);
+            if (date > latest) latest = date;
+        });
+        return latest;
+    }
+
     function sumBy(rows, field) {
         return rows.reduce(function (acc, row) {
             var n = Number(row[field]);
@@ -128,6 +145,17 @@
             .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
     }
 
+    // F7：用户行为饼图数据（新老用户订单数占比）
+    function aggregateUserBehavior(rows) {
+        var map = new Map();
+        rows.forEach(function (order) {
+            var type = order.userType === 'new' ? '新用户' : (order.userType === 'old' ? '老用户' : '未知');
+            map.set(type, (map.get(type) || 0) + 1);
+        });
+        return Array.from(map.entries())
+            .map(function (item) { return { category: item[0], saleTotal: item[1] }; });
+    }
+
     /* ---------- 渲染 ---------- */
     function setText(el, text) {
         if (el) el.textContent = text;
@@ -169,11 +197,12 @@
         var categoryRows = filtered || !state.categoryRows ? aggregateCategories(rows) : state.categoryRows;
         var topRows = filtered || !state.topGoods ? aggregateTopGoods(rows) : state.topGoods;
         var trendRows = aggregateTrend(rows);
+        var userRows = aggregateUserBehavior(rows);
 
         Charts.renderTrend(els.chartLine, trendRows);
         Charts.renderCategoryBar(els.chartBar, categoryRows);
         Charts.renderTop10(els.chartTop10, topRows);
-        Charts.renderCategoryPie(els.chartPie, categoryRows);
+        Charts.renderCategoryPie(els.chartPie, userRows);
     }
 
     function renderTable(rows) {
@@ -439,6 +468,19 @@
         [els.start, els.end].forEach(function (input) {
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter') applyFilters();
+            });
+        });
+
+        // F3 快捷选项：近7天/近30天/近90天（以数据里的最后一天为终点）
+        document.querySelectorAll('.quick-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var days = Number(btn.getAttribute('data-days')) || 7;
+                var latest = latestOrderDate();
+                var endDate = latest ? new Date(latest + 'T00:00:00') : new Date();
+                var startDate = new Date(endDate.getTime() - (days - 1) * 86400000);
+                els.end.value = toLocalDateString(endDate);
+                els.start.value = toLocalDateString(startDate);
+                applyFilters();
             });
         });
 

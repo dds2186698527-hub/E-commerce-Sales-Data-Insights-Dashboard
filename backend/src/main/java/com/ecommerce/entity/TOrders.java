@@ -22,4 +22,6 @@ public class TOrders {
     private BigDecimal totalAmount;
     private LocalDateTime orderTime;
     private String userId;
+    private String userType;
+    private String payMethod;
 }

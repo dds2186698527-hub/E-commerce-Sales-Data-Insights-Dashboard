@@ -1,6 +1,7 @@
 import pymysql
 import pandas as pd
 import os
+import random
 
 # 数据库配置
 db_config = {
@@ -23,7 +24,7 @@ df = pd.read_csv(csv_path, encoding="utf-8")
 print("CSV列名：", df.columns.tolist())
 print("CSV总行数：", len(df))
 
-# 2. 字段映射
+# 2. 字段映射（注意：CSV 中的"用户性别"列不导入，表结构中无性别字段）
 df = df.rename(columns={
     "用户ID": "user_id",
     "商品名称": "goods_name",
@@ -31,14 +32,29 @@ df = df.rename(columns={
     "单价": "unit_price",
     "购买数量": "quantity",
     "消费金额": "total_amount",
-    "购买时间": "order_time",
-    "用户性别": "user_type"
+    "购买时间": "order_time"
 })
 
 # 重点：CSV没有订单号，新增order_no，自动生成1,2,3...
 df["order_no"] = range(1, len(df) + 1)
-# pay_method表中有，CSV没有，给个默认值
-df["pay_method"] = "未知"
+
+# user_type：按用户ID绑定，以该用户的首次下单时间判定新老
+# 取所有用户首次下单时间的中位数作为阈值，早于阈值首次下单的算老用户，晚于的算新用户
+# 这样同一用户所有订单类型固定，且近7/30/90天既有新用户也有老用户
+df["order_time_dt"] = pd.to_datetime(df["order_time"])
+first_order = df.groupby("user_id")["order_time_dt"].transform("min")
+threshold = first_order.median()
+df["user_type"] = first_order.apply(lambda t: "old" if t < threshold else "new")
+print(f"新老用户判定阈值（用户首次下单时间中位数）：{threshold}")
+df.drop(columns=["order_time_dt"], inplace=True)
+
+# pay_method：CSV里有"支付方式"列就直接用，没有则统一填"未知"
+if "支付方式" in df.columns:
+    df = df.rename(columns={"支付方式": "pay_method"})
+    print("✅ CSV含支付方式列，直接使用真实数据")
+else:
+    df["pay_method"] = "未知"
+    print("⚠️ CSV无支付方式列，默认填'未知'")
 
 # 只保留表需要的列
 cols = ["order_no", "goods_name", "category", "unit_price", "quantity",

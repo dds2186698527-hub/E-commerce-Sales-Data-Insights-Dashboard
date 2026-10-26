@@ -1,59 +1,46 @@
-# preprocess_tianchi.py
-# 支持读取data目录下多个天池原始csv文件，合并、清洗、补全字段
-import csv
-import random
+# generate_orders.py
+# 将淘宝/京东/拼多多/苏宁易购/天猫/1688 等平台 CSV 合并为 ecommerce_data.csv
+# 输出列名与源文件一致（中文），供 csv_import.py 导入 MySQL
+import pandas as pd
+import os
 import glob
 
-# 匹配data目录下所有原始csv文件
-ORIGIN_FILES = glob.glob("tianchi_*.csv")
-OUTPUT_CSV = "orders.csv"
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
-pay_method_list = ["微信", "支付宝", "银行卡"]
-user_type_list = ["new", "old"]
-
-out_rows = []
-
-for file_path in ORIGIN_FILES:
-    print(f"正在读取原始文件：{file_path}")
-    with open(file_path, "r", encoding="utf-8-sig") as f_in:
-        reader = csv.DictReader(f_in)
-        for row in reader:
-            # 兼容不同csv字段名，根据你实际天池表头调整key
-            order_no = row["invoice_no"]
-            goods_name = row["product_name"]
-            category = row["category"]
-            unit_price = row["unit_price"]
-            quantity = row["quantity"]
-            total_amount = row["total_amount"]
-            order_time = row["invoice_date"]
-            user_id = row["customer_id"]
-
-            # 补全缺失字段
-            user_type = random.choice(user_type_list)
-            pay_method = random.choice(pay_method_list)
-
-            out_rows.append({
-                "order_no": order_no,
-                "goods_name": goods_name,
-                "category": category,
-                "unit_price": unit_price,
-                "quantity": quantity,
-                "total_amount": total_amount,
-                "order_time": order_time,
-                "user_id": user_id,
-                "user_type": user_type,
-                "pay_method": pay_method
-            })
-
-# 输出合并后的标准csv
-fieldnames = [
-    "order_no", "goods_name", "category", "unit_price", "quantity",
-    "total_amount", "order_time", "user_id", "user_type", "pay_method"
+# 各平台原始 CSV 文件（列名统一为中文）
+platform_files = [
+    "淘宝.csv", "京东.csv", "拼多多.csv",
+    "苏宁易购.csv", "天猫.csv", "1688.csv"
 ]
-with open(OUTPUT_CSV, "w", newline="", encoding="utf-8-sig") as f_out:
-    writer = csv.DictWriter(f_out, fieldnames=fieldnames)
-    writer.writeheader()
-    writer.writerows(out_rows)
 
-print(f"预处理完成，一共合并 {len(out_rows)} 条记录，输出文件：{OUTPUT_CSV}")
-print("⚠️注意：此csv用于手动导入MySQL，后端Java代码不会读取任何csv文件！")
+# 也兼容自动匹配：data 目录下除 ecommerce_data.csv / orders.csv 外的所有 CSV
+all_csv = glob.glob(os.path.join(base_dir, "*.csv"))
+for f in all_csv:
+    name = os.path.basename(f)
+    if name not in ("ecommerce_data.csv", "orders.csv") and name not in platform_files:
+        platform_files.append(name)
+
+print("待合并文件：")
+frames = []
+for name in platform_files:
+    path = os.path.join(base_dir, name)
+    if not os.path.exists(path):
+        print(f"  ⚠️ 跳过（不存在）：{name}")
+        continue
+    df = pd.read_csv(path, encoding="utf-8")
+    print(f"  ✅ {name}：{len(df)} 行")
+    frames.append(df)
+
+if not frames:
+    print("❌ 没有找到任何平台 CSV 文件")
+    exit(1)
+
+# 合并
+merged = pd.concat(frames, ignore_index=True)
+print(f"\n合并完成：共 {len(merged)} 行")
+
+# 输出 ecommerce_data.csv
+out_path = os.path.join(base_dir, "ecommerce_data.csv")
+merged.to_csv(out_path, index=False, encoding="utf-8")
+print(f"✅ 已输出：{out_path}")
+print("下一步运行 backend/csv_import.py 将数据导入 MySQL")

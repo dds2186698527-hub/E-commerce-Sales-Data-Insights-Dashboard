@@ -11,10 +11,10 @@
     var API_BASE_URL = 'http://127.0.0.1:8080';
 
     var ENDPOINTS = {
-        total: '/api/order/total',            // 订单总数 + 销售总额
-        categorySales: '/api/order/category/sales', // 按品类销售额
-        goodsTop10: '/api/order/goods/top10', // 商品销量 TOP10
-        orderList: '/api/order/list',         // 订单明细
+        kpi: '/api/orders/kpi',               // KPI汇总（销售额/订单数/客单价/热销商品数）
+        categorySales: '/api/orders/category-sales', // 按品类销售额
+        goodsTop10: '/api/orders/ranking?metric=qty', // 商品销量 TOP10
+        orderList: '/api/orders/list',        // 订单明细全量
         forecast: '/api/forecast'             // 商家建议：未来 7/30/90 天销量或销售额预测
     };
 
@@ -81,12 +81,14 @@
         return toText(value).replace('T', ' ').slice(0, 19);
     }
 
-    // F1：{ orderCount, totalSales }
+    // F1：KPI汇总
     function fetchSummary() {
-        return request(ENDPOINTS.total).then(function (raw) {
+        return request(ENDPOINTS.kpi).then(function (raw) {
             return {
-                orderCount: toNumber(pick(raw, ['order_count', 'orderCount'])),
-                totalSales: toNumber(pick(raw, ['all_sale', 'allSale']))
+                orderCount: toNumber(pick(raw, ['orderCount', 'order_count'])),
+                totalSales: toNumber(pick(raw, ['totalSales', 'total_sales', 'all_sale', 'allSale'])),
+                avgOrderValue: toNumber(pick(raw, ['avgOrderValue', 'avg_order_value'])),
+                hotGoodsCount: toNumber(pick(raw, ['hotGoodsCount', 'hot_goods_count']))
             };
         });
     }
@@ -128,7 +130,9 @@
                     quantity: toNumber(pick(row, ['quantity'])),
                     totalAmount: toNumber(pick(row, ['total_amount', 'totalAmount'])),
                     orderTime: toDateTime(pick(row, ['order_time', 'orderTime'])),
-                    userId: toText(pick(row, ['user_id', 'userId']))
+                    userId: toText(pick(row, ['user_id', 'userId'])),
+                    userType: toText(pick(row, ['user_type', 'userType'])),
+                    payMethod: toText(pick(row, ['pay_method', 'payMethod']))
                 };
             });
         });

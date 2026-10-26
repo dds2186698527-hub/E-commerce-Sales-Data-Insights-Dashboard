@@ -51,6 +51,11 @@
             <input type="date" id="start-date" aria-label="开始日期">
             <span>至</span>
             <input type="date" id="end-date" aria-label="结束日期">
+            <div class="quick-range">
+                <button type="button" data-days="7" class="quick-btn">近7天</button>
+                <button type="button" data-days="30" class="quick-btn">近30天</button>
+                <button type="button" data-days="90" class="quick-btn">近90天</button>
+            </div>
             <button id="filter-query" type="button">查询</button>
             <button id="filter-reset" type="button" class="ghost">重置</button>
             <span class="filter-hint"></span>
@@ -74,7 +79,7 @@
                 <div class="chart-empty" hidden></div>
             </div>
             <div class="chart-box">
-                <div class="chart-title">F7 品类销售额占比</div>
+                <div class="chart-title">F7 用户行为占比（新老用户）</div>
                 <div id="chart-pie" class="chart-canvas"></div>
                 <div class="chart-empty" hidden></div>
             </div>

@@ -181,7 +181,7 @@
         return draw(canvas, option, list, '暂无商品销量数据', '需要后端返回 /api/order/goods/top10');
     }
 
-    // F7 品类销售占比：rows = [{ category, saleTotal }]
+    // F7 用户行为占比：rows = [{ category, saleTotal }]（新老用户订单数）
     function renderCategoryPie(canvas, rows) {
         var list = (rows || []).filter(function (r) { return r.saleTotal > 0; });
         var option = {
@@ -189,7 +189,7 @@
             tooltip: {
                 trigger: 'item',
                 formatter: function (p) {
-                    return p.marker + p.name + '<br/>' + money(p.value) + '（' + p.percent + '%）';
+                    return p.marker + p.name + '<br/>' + p.value.toLocaleString('zh-CN') + ' 单（' + p.percent + '%）';
                 }
             },
             legend: {
@@ -200,7 +200,7 @@
                 textStyle: { color: '#5b6577', fontSize: 12 }
             },
             series: [{
-                name: '品类销售额',
+                name: '订单数',
                 type: 'pie',
                 radius: ['42%', '66%'],
                 center: ['50%', '46%'],
@@ -210,7 +210,7 @@
                 data: list.map(function (r) { return { name: r.category, value: r.saleTotal }; })
             }]
         };
-        return draw(canvas, option, list, '暂无品类占比数据', '需要后端返回 /api/order/category/sales');
+        return draw(canvas, option, list, '暂无占比数据', '需要后端返回 /api/orders/list');
     }
 
     // F9 商家建议：预测榜 TOP10（横向柱状图，涨蓝跌红）
