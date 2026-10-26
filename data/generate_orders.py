@@ -37,7 +37,8 @@ AMAZON_CATEGORY_MAP = {
 
 # 日期统一成 MySQL datetime 可识别的 "YYYY-MM-DD HH:MM:SS"
 def norm_date(series, dayfirst=False):
-    d = pd.to_datetime(series, errors="coerce", dayfirst=dayfirst)
+    # format="mixed"：兼容各平台多种日期格式，避免 dateutil 逐条推断警告
+    d = pd.to_datetime(series, errors="coerce", format="mixed", dayfirst=dayfirst)
     return d.dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
@@ -60,7 +61,8 @@ def read_file(path):
         magic = f.read(4)
     for enc in ("utf-8-sig", "gb18030"):
         try:
-            return pd.read_csv(path, encoding=enc), None
+            # low_memory=False：整表一次性推断列类型，避免"Unnamed: 22"混合类型 DtypeWarning
+            return pd.read_csv(path, encoding=enc, low_memory=False), None
         except Exception:
             continue
     # 文本读取失败但文件头是 xlsx 容器（PK 魔数，命名成 .csv 的 Excel）
