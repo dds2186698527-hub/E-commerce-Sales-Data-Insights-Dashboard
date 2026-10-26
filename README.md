@@ -54,9 +54,10 @@ ecommerce-dashboard
 ├── sql/
 │   └── create_table.sql                  # 建库建表脚本
 ├── data/
-│   ├── 淘宝.csv / 京东.csv / 拼多多.csv / 苏宁易购.csv / 天猫.csv / 1688.csv  # 各平台原始数据
-│   ├── generate_orders.py              # 合并各平台CSV → ecommerce_data.csv
-│   └── ecommerce_data.csv              # 合并后的总数据
+│   ├── 1688.csv / 京东.csv / 天猫.csv / 拼多多.csv / 淘宝.csv / 苏宁易购.csv   # 各平台生成数据
+│   ├── Amazon Sale Report.csv / 白鲸电商销售数据.csv / 大话电商销售数据.xlsx   # 其它来源数据
+│   ├── generate_orders.py              # 自动扫描并合并清洗 data/ 全部订单数据 → finall.csv
+│   └── finall.csv                      # 合并清洗后的总数据（131,985 行；被 .gitignore 忽略，不入库）
 └── README.md
 ```
 
@@ -66,13 +67,36 @@ ecommerce-dashboard
 
 - **数据库名**：`ecommerce_dashboard`
 - **数据表**：`t_orders`（电商订单表）
-- **字段**：`order_no`（订单号）、`goods_name`（商品名）、`category`（品类）、`unit_price`（单价）、`quantity`（数量）、`total_amount`（金额）、`order_time`（下单时间）、`user_id`（用户ID）、`user_type`（用户类型）、`pay_method`（支付方式）
+- **字段**：`order_no`（订单号）、`goods_name`（商品名）、`category`（品类）、`unit_price`（单价）、`quantity`（数量）、`total_amount`（金额）、`order_time`（下单时间）、`user_id`（用户ID）、`user_type`（用户类型：new 新用户 / old 老用户）、`pay_method`（支付方式）
+- **数据来源（开放数据集）**：来自和鲸社区与阿里天池的公开电商数据集，经合并、去重与清洗得到 `finall.csv`（131,985 行）。
+  - 和鲸社区：<https://www.heywhale.com/mw/dataset/6a452fa5c9a3ffe866c7c71a/file>
+  - 和鲸社区：<https://www.heywhale.com/mw/dataset/65bb52cc21223d1726da9a0a/file>
+  - 和鲸社区：<https://www.heywhale.com/mw/dataset/656ee56d625cc861b7dbd4fc/file>
+  - 阿里天池：<https://tianchi.aliyun.com/dataset/216886>
+  - 各源字段口径与清洗规则详见项目文档「数据说明」。
+- **数据量**：合并清洗后 `finall.csv` 约 **131,985 行**，导入后 `SELECT COUNT(*) FROM t_orders;` 应为 131,985。
 
 初始化（脚本里已包含 `CREATE DATABASE` 和 `USE`）：
 
 ```bash
 mysql -u root -p < sql/create_table.sql
 ```
+
+### 📥 生成并导入数据（一次性，换机器必须执行）
+
+`finall.csv` 由 `data/generate_orders.py` **自动扫描 `data/` 目录下全部订单文件**合并清洗生成（自动识别 CSV / Excel，文件级+行级去重，过滤空值/负金额/异常单价，品类归一，无需手动合并）：
+
+```bash
+# 1) 生成合并数据（输出 data/finall.csv，约 131,985 行）
+cd data
+python generate_orders.py
+
+# 2) 导入 MySQL（表结构见 sql/create_table.sql）
+cd ../backend
+python csv_import.py
+```
+
+> 若本机 MySQL 密码不是 `123456`，需同步修改 `backend/csv_import.py` 里的数据库连接配置。
 
 ---
 
@@ -99,6 +123,8 @@ cd E-commerce-Sales-Data-Insights-Dashboard
 ```bash
 mysql -u root -p < sql/create_table.sql
 ```
+
+> 建表后还需导入数据，见上文「📥 生成并导入数据」（先跑 `generate_orders.py` 生成 `finall.csv`，再跑 `csv_import.py` 入库）。
 
 ### 3. 配置数据库连接
 
@@ -159,13 +185,16 @@ java -jar target/backend-0.0.1-SNAPSHOT.jar
 | 接口 | 请求方式 | 功能 | 对应前端 |
 | :--- | :--- | :--- | :--- |
 | `/api/categories` | GET | A1 品类列表 | F2 品类筛选下拉框 |
-| `/api/orders?category=&startDate=&endDate=&keyword=&page=&size=` | GET | A2 条件查询+分页 | F8 订单表格 |
-| `/api/orders/list` | GET | 全部订单明细 | F3/F4/F7 前端聚合用 |
-| `/api/orders/kpi` | GET | A3 KPI汇总（销售额/订单数/客单价/热销商品数） | F1 KPI卡片 |
+| `/api/orders?category=&startDate=&endDate=&keyword=&page=&size=` | GET | A2 条件查询+分页（明细表格翻页走后端） | F8 订单表格 |
+| `/api/orders/list` | GET | 全部订单明细（带筛选，全量） | 备用 |
+| `/api/orders/kpi` | GET | A3 KPI汇总（销售额/订单数/客单价/总销量/热销商品数，共 5 项） | F1 KPI卡片 |
 | `/api/orders/ranking?metric=qty\|revenue` | GET | A4 商品TOP10 | F6 横向柱状图 |
 | `/api/orders/category-sales` | GET | 按品类销售额 | F5 品类柱状图 |
 | `/api/orders/stats?granularity=day\|week\|month` | GET | A5 按时间聚合销售额与订单量 | F4 趋势图 |
+| `/api/orders/user-type` | GET | 新老用户订单占比 | F7 饼图 |
 | `/api/forecast?horizon=7\|30\|90&metric=revenue\|qty` | GET | 未来区间销量/销售额预测 + 备货建议 | F9 商家建议 |
+
+> 统一返回结构 `Result&lt;T&gt;`：`{ code, message, data }`，`code=200` 表示成功。除 `/api/forecast` 外，各聚合接口均支持 `category` / `startDate` / `endDate` 筛选参数，前端筛选后**重新向后端查询**，非本地假过滤。
 
 ---
 
@@ -177,7 +206,7 @@ java -jar target/backend-0.0.1-SNAPSHOT.jar
 | 启动报 `Port 8080 was already in use` | 端口被占：换 `server.port`，或杀掉旧 java 进程 |
 | 启动报 `Access denied for user 'root'@'localhost'` | `application.yml` 里的密码和你本机 MySQL 不一致 |
 | 启动报 `Unknown database 'ecommerce_dashboard'` | 没执行 `sql/create_table.sql` |
-| 页面「暂无订单数据（数据库 t_orders 没有记录）」 | 只建了表没导数据，见「📥 导入数据」 |
+| 页面「暂无订单数据（数据库 t_orders 没有记录）」 | 只建了表没导数据，见「📥 生成并导入数据」 |
 | 编译报 Lombok / `JCTree` 相关错误 | JDK 版本过高（25/26），换成 JDK 17 或 21 |
 | 编译卡在下载依赖 | 配置 Maven 阿里云镜像，或换网络 |
 | `mvn` 命令不存在 | 用 IDEA 自带 Maven，或安装 Maven 并配置 `MAVEN_HOME` |
