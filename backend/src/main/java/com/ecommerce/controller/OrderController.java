@@ -71,11 +71,17 @@ public class OrderController {
         return resp;
     }
 
-    // 全量订单列表（前端筛选、趋势图、饼图聚合用）
+    // 订单列表（可带筛选条件，供前端聚合与明细使用）
     @GetMapping("/orders/list")
-    @Operation(summary = "查询全部订单数据（前端聚合用）")
-    public List<TOrders> getOrderList() {
-        return ordersService.list();
+    @Operation(summary = "查询订单数据（支持品类/日期/关键字筛选）")
+    public List<TOrders> getOrderList(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            @RequestParam(required = false) String keyword) {
+        QueryWrapper<TOrders> wrapper = buildQuery(category, startDate, endDate, keyword);
+        wrapper.orderByDesc("order_time");
+        return ordersService.list(wrapper);
     }
 
     // A3：KPI汇总（总销售额、总订单数、平均客单价、热销商品数）

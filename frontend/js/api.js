@@ -117,9 +117,19 @@
         });
     }
 
-    // F8 / 客户端聚合：原始行 -> 规范化订单
-    function fetchOrderList() {
-        return request(ENDPOINTS.orderList).then(function (rows) {
+    // 把筛选条件拼成查询串（品类/开始日期/结束日期）
+    function filterQuery(filters) {
+        if (!filters) return '';
+        var parts = [];
+        if (filters.category) parts.push('category=' + encodeURIComponent(filters.category));
+        if (filters.start) parts.push('startDate=' + encodeURIComponent(filters.start));
+        if (filters.end) parts.push('endDate=' + encodeURIComponent(filters.end));
+        return parts.length ? '?' + parts.join('&') : '';
+    }
+
+    // F8 / 客户端聚合：原始行 -> 规范化订单（可带筛选条件，筛选由后端 WHERE 完成）
+    function fetchOrderList(filters) {
+        return request(ENDPOINTS.orderList + filterQuery(filters)).then(function (rows) {
             return (rows || []).map(function (row) {
                 return {
                     id: toNumber(pick(row, ['id'])),

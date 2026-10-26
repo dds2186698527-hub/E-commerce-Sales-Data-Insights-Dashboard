@@ -83,7 +83,7 @@
                 trigger: 'axis',
                 valueFormatter: money
             },
-            grid: { left: 8, right: 44, top: 24, bottom: 8, containLabel: true },
+            grid: { left: 8, right: 24, top: 24, bottom: 16, containLabel: true },
             xAxis: Object.assign({
                 type: 'category',
                 boundaryGap: false,
@@ -105,7 +105,7 @@
                 data: rows.map(function (p) { return p.sales; })
             }]
         };
-        return draw(canvas, option, rows, '暂无销售趋势数据', '需要后端返回订单明细（/api/order/list）');
+        return draw(canvas, option, rows, '暂无销售趋势数据', '需要后端返回订单明细（/api/orders/list）');
     }
 
     // F5 品类销售：rows = [{ category, saleTotal }]
@@ -118,7 +118,7 @@
                 axisPointer: { type: 'shadow' },
                 valueFormatter: money
             },
-            grid: { left: 8, right: 24, top: 28, bottom: 8, containLabel: true },
+            grid: { left: 8, right: 24, top: 24, bottom: 16, containLabel: true },
             xAxis: Object.assign({
                 type: 'category',
                 data: list.map(function (r) { return r.category; }),
@@ -139,7 +139,7 @@
                 data: list.map(function (r) { return r.saleTotal; })
             }]
         };
-        return draw(canvas, option, list, '暂无品类销售数据', '需要后端返回 /api/order/category/sales');
+        return draw(canvas, option, list, '暂无品类销售数据', '需要后端返回 /api/orders/category-sales');
     }
 
     // F6 商品 TOP10：rows = [{ goodsName, totalQty }]（已按销量降序）
@@ -154,7 +154,7 @@
                 axisPointer: { type: 'shadow' },
                 valueFormatter: function (v) { return v + ' 件'; }
             },
-            grid: { left: 8, right: 48, top: 16, bottom: 8, containLabel: true },
+            grid: { left: 8, right: 64, top: 16, bottom: 16, containLabel: true },
             xAxis: {
                 type: 'value',
                 splitLine: { lineStyle: { color: '#eef1f6' } },
@@ -167,7 +167,7 @@
                 data: names,
                 axisLine: { lineStyle: { color: '#d9dee7' } },
                 axisTick: { show: false },
-                axisLabel: { color: '#5b6577', fontSize: 12, width: 110, overflow: 'truncate' }
+                axisLabel: { color: '#5b6577', fontSize: 12, width: 96, overflow: 'truncate' }
             },
             series: [{
                 name: '销量',
@@ -178,7 +178,7 @@
                 data: values
             }]
         };
-        return draw(canvas, option, list, '暂无商品销量数据', '需要后端返回 /api/order/goods/top10');
+        return draw(canvas, option, list, '暂无商品销量数据', '需要后端返回 /api/orders/ranking');
     }
 
     // F7 用户行为占比：rows = [{ category, saleTotal }]（新老用户订单数）
@@ -240,7 +240,7 @@
                         '<br/>' + (item.advice || '');
                 }
             },
-            grid: { left: 8, right: 56, top: 16, bottom: 8, containLabel: true },
+            grid: { left: 8, right: 64, top: 16, bottom: 16, containLabel: true },
             xAxis: {
                 type: 'value',
                 splitLine: { lineStyle: { color: '#eef1f6' } },
@@ -253,7 +253,7 @@
                 data: names,
                 axisLine: { lineStyle: { color: '#d9dee7' } },
                 axisTick: { show: false },
-                axisLabel: { color: '#5b6577', fontSize: 12, width: 110, overflow: 'truncate' }
+                axisLabel: { color: '#5b6577', fontSize: 12, width: 96, overflow: 'truncate' }
             },
             series: [{
                 name: byQty ? '预测销量' : '预测销售额',
