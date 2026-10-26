@@ -22,22 +22,25 @@
             <button id="status-retry" class="status-retry" type="button">重试</button>
         </div>
 
-        <!-- F1 KPI -->
+        <!-- F1 KPI：4 个核心指标，标题带单位，下方注明口径 -->
         <section class="kpi-container" aria-label="核心指标">
             <div class="kpi-card">
-                <h3>总销售额</h3>
+                <h3>总销售额（元）</h3>
                 <p id="kpi-sales">—</p>
+                <div class="kpi-hint">全部订单金额合计</div>
             </div>
             <div class="kpi-card">
-                <h3>总订单数</h3>
+                <h3>总订单数（单）</h3>
                 <p id="kpi-orders">—</p>
+                <div class="kpi-hint">订单记录条数</div>
             </div>
             <div class="kpi-card">
-                <h3>平均客单价</h3>
+                <h3>平均客单价（元/单）</h3>
                 <p id="kpi-avg">—</p>
+                <div class="kpi-hint">总销售额 ÷ 总订单数</div>
             </div>
             <div class="kpi-card">
-                <h3>热销商品数</h3>
+                <h3>热销商品数（个）</h3>
                 <p id="kpi-hot">—</p>
                 <div class="kpi-hint">销量 ≥ 平均单商品销量的商品数</div>
             </div>
@@ -58,28 +61,28 @@
             </div>
             <button id="filter-query" type="button">查询</button>
             <button id="filter-reset" type="button" class="ghost">重置</button>
-            <span class="filter-hint"></span>
+            <span class="filter-hint">查询会重新请求后端（按品类 / 日期条件过滤）</span>
         </section>
 
         <!-- F4 - F7 图表 -->
         <section class="charts-grid">
             <div class="chart-box">
-                <div class="chart-title">F4 销售趋势（按日销售额）</div>
+                <div class="chart-title"> 销售额趋势（元）</div>
                 <div id="chart-line" class="chart-canvas"></div>
                 <div class="chart-empty" hidden></div>
             </div>
             <div class="chart-box">
-                <div class="chart-title">F5 品类销售额</div>
+                <div class="chart-title"> 品类销售额（元）</div>
                 <div id="chart-bar" class="chart-canvas"></div>
                 <div class="chart-empty" hidden></div>
             </div>
             <div class="chart-box">
-                <div class="chart-title">F6 商品销量 TOP10</div>
+                <div class="chart-title"> 商品销量 TOP10（件）</div>
                 <div id="chart-top10" class="chart-canvas"></div>
                 <div class="chart-empty" hidden></div>
             </div>
             <div class="chart-box">
-                <div class="chart-title">F7 用户行为占比（新老用户）</div>
+                <div class="chart-title"> 用户行为占比（新老用户）</div>
                 <div id="chart-pie" class="chart-canvas"></div>
                 <div class="chart-empty" hidden></div>
             </div>
@@ -89,7 +92,7 @@
         <section class="advice-panel" aria-label="商家建议">
             <div class="advice-head">
                 <div class="advice-head-text">
-                    <h3>F9 商家建议 · 未来销量 / 销售额预测</h3>
+                    <h3> 商家建议 · 未来销量 / 销售额预测</h3>
                     <p id="advice-sub" class="advice-sub">基于历史订单预测（最近 28 天日均 + 周内季节性 + 短期趋势）</p>
                 </div>
                 <div class="advice-controls">
@@ -114,7 +117,7 @@
 
             <div class="advice-grid">
                 <div class="chart-box">
-                    <div class="chart-title">预测榜 TOP10（蓝=上涨，红=下滑）</div>
+                    <div class="chart-title" id="forecast-chart-title">预测榜 TOP10（元，蓝涨红跌）</div>
                     <div id="chart-forecast" class="chart-canvas"></div>
                     <div class="chart-empty" hidden></div>
                 </div>

@@ -48,6 +48,13 @@ public class TOrdersServiceImpl extends ServiceImpl<TOrdersMapper, TOrders> impl
     }
 
     @Override
+    public List<TOrders> listOrders(String category, String startDate, String endDate, String keyword) {
+        QueryWrapper<TOrders> wrapper = buildQuery(category, startDate, endDate, keyword);
+        wrapper.orderByDesc("order_time");
+        return list(wrapper);
+    }
+
+    @Override
     public List<TOrders> listAll() {
         return list();
     }

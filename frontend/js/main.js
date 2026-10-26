@@ -74,7 +74,7 @@
         }, 0);
     }
 
-    /* ---------- 数据聚合（筛选时全部在本地算，后端暂未提供筛选参数） ---------- */
+    /* ---------- 数据聚合（筛选结果由后端查询返回，这里只做展示层聚合） ---------- */
     function filteredOrders() {
         var f = state.filters;
         return state.orders.filter(function (order) {
@@ -317,6 +317,8 @@
         var data = state.forecast;
         var metric = state.forecastMetric;
 
+        setText(els.forecastChartTitle, '预测榜 TOP10（' + (metric === 'qty' ? '件' : '元') + '，蓝涨红跌）');
+
         if (!data) {
             setText(els.adviceTotal, '—');
             setText(els.adviceQty, '—');
@@ -331,8 +333,7 @@
             return;
         }
 
-        setText(els.adviceSub, '预测基准日 ' + (data.baseDate || '--') +
-            '（历史数据截止日） · 区间 ' + data.horizonDays + ' 天 · 按' + metricLabel(metric));
+        setText(els.adviceSub, ' · ' + data.horizonDays + '  天 · 按' + metricLabel(metric));
         setText(els.adviceTotal, formatMetric(data.summary.totalPredicted, metric));
         setText(els.adviceQty, formatMetric(data.summary.totalPredictedQty, 'qty'));
         setText(els.adviceGrowing, data.summary.growing + ' 个');
@@ -413,6 +414,28 @@
     }
 
     /* ---------- 事件 ---------- */
+    // 筛选走后端查询（/api/orders/list?category=&startDate=&endDate=），不是前端本地假过滤
+    function loadFilteredOrders() {
+        var applied = state.filters;
+        setText(els.updated, '查询中…');
+        showStatus([]);
+        Api.fetchOrderList(applied)
+            .then(function (rows) {
+                state.orders = rows;
+                // 本次结果集由后端筛选而来，KPI/图表改用该结果重新聚合
+                state.summary = null;
+                state.categoryRows = null;
+                state.topGoods = null;
+                renderAll();
+                setText(els.updated, '查询完成 · ' + rows.length + ' 条 · ' +
+                    new Date().toLocaleTimeString('zh-CN'));
+            })
+            .catch(function (err) {
+                showStatus(['筛选查询失败：' + (err && err.message ? err.message : '请求失败')]);
+                setText(els.updated, '查询失败 · ' + new Date().toLocaleTimeString('zh-CN'));
+            });
+    }
+
     function applyFilters() {
         state.filters = {
             category: els.select.value,
@@ -420,14 +443,16 @@
             end: els.end.value
         };
         state.page = 1;
-        renderAll();
+        loadFilteredOrders();
     }
 
     function resetFilters() {
         els.select.value = '';
         els.start.value = '';
         els.end.value = '';
-        applyFilters();
+        state.filters = { category: '', start: '', end: '' };
+        state.page = 1;
+        loadAll();
     }
 
     function debounce(fn, wait) {
@@ -540,6 +565,7 @@
             chartTop10: $('chart-top10'),
             chartPie: $('chart-pie'),
             chartForecast: $('chart-forecast'),
+            forecastChartTitle: $('forecast-chart-title'),
             adviceTotal: $('advice-total'),
             adviceQty: $('advice-qty'),
             adviceGrowing: $('advice-growing'),

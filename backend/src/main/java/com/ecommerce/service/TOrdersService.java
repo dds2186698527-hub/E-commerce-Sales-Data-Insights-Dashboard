@@ -19,6 +19,9 @@ public interface TOrdersService extends IService<TOrders> {
     Map<String, Object> pageOrders(String category, String startDate, String endDate,
                                    String keyword, int page, int size);
 
+    /** 订单列表（支持品类/时间范围/关键字筛选，按时间倒序） */
+    List<TOrders> listOrders(String category, String startDate, String endDate, String keyword);
+
     /** 全量订单（备用接口） */
     List<TOrders> listAll();
 

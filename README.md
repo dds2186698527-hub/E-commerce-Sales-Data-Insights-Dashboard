@@ -18,8 +18,7 @@
 | **版本管理** | Git + GitHub | 协同开发与进度追踪 |
 
 > ⚠️ **JDK 版本注意**：项目依赖的 Lombok 1.18.30 不支持 JDK 25/26，编译会报，
-> 请使用 **JDK 17 或 JDK 21**（推荐 21 LTS）。
-
+> 请使用 **JDK 17 **
 ---
 
 ## 📁 项目目录结构
@@ -83,7 +82,7 @@ mysql -u root -p < sql/create_table.sql
 
 | 软件 | 版本 | 检查命令 |
 | :--- | :--- | :--- |
-| JDK | **17 或 21**（推荐 21） | `java -version` |
+| JDK | **17** | `java -version` |
 | Maven | 3.8+ | `mvn -v`（没有的话用 IDEA 自带的） |
 | MySQL | 8.0+ | 服务已启动，能登录 |
 | 浏览器 | Chrome / Edge 等现代浏览器 | — |
