@@ -8,7 +8,7 @@ db_config = {
     "host": "127.0.0.1",
     "port": 3306,
     "user": "root",
-    "password": "060831",  # 改成你的mysql密码
+    "password": "123456",  # 改成你的mysql密码
     "database": "ecommerce_dashboard",
     "charset": "utf8mb4"
 }
@@ -38,10 +38,14 @@ df = df.rename(columns={
 # 重点：CSV没有订单号，新增order_no，自动生成1,2,3...
 df["order_no"] = range(1, len(df) + 1)
 
-# user_type：按时间判断，以2024-07-01为界，之前下单的算老用户，之后的算新用户
+# user_type：按用户ID绑定，以该用户的首次下单时间判定新老
+# 取所有用户首次下单时间的中位数作为阈值，早于阈值首次下单的算老用户，晚于的算新用户
+# 这样同一用户所有订单类型固定，且近7/30/90天既有新用户也有老用户
 df["order_time_dt"] = pd.to_datetime(df["order_time"])
-cutoff = pd.Timestamp("2024-07-01")
-df["user_type"] = df["order_time_dt"].apply(lambda t: "old" if t < cutoff else "new")
+first_order = df.groupby("user_id")["order_time_dt"].transform("min")
+threshold = first_order.median()
+df["user_type"] = first_order.apply(lambda t: "old" if t < threshold else "new")
+print(f"新老用户判定阈值（用户首次下单时间中位数）：{threshold}")
 df.drop(columns=["order_time_dt"], inplace=True)
 
 # pay_method：CSV里有"支付方式"列就直接用，没有则统一填"未知"
