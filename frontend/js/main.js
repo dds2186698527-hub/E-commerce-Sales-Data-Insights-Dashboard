@@ -42,7 +42,7 @@
     function money(value, digits) {
         var n = Number(value);
         if (!isFinite(n)) n = 0;
-        return '¥ ' + n.toLocaleString('zh-CN', {
+        return  n.toLocaleString('zh-CN', {
             minimumFractionDigits: digits || 0,
             maximumFractionDigits: digits || 2
         });
